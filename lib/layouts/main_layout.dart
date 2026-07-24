@@ -57,6 +57,7 @@ class _MainTabLayoutState extends State<MainTabLayout> {
                 overlayColor: WidgetStateProperty.all(Colors.transparent),
                 surfaceTintColor: Colors.transparent,
                 shadowColor: Colors.transparent,
+                backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
                 destinations: [
                   const NavigationDestination(
                     icon: SizedBox.shrink(),
@@ -93,7 +94,9 @@ class _MainTabLayoutState extends State<MainTabLayout> {
                   overlayColor: WidgetStateProperty.all(Colors.transparent),
                   surfaceTintColor: Colors.transparent,
                   shadowColor: Colors.transparent,
-
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerLow,
                   iconTheme: WidgetStateProperty.resolveWith<IconThemeData>(
                     (states) => IconThemeData(
                       color: states.contains(WidgetState.selected)

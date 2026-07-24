@@ -490,7 +490,7 @@ class _TodosScreenState extends State<TodosScreen> {
                 SliverList(
                   delegate: SliverChildBuilderDelegate((context, index) {
                     final todo = _doneTodos[index];
-                    debugPrint(todo.id);
+
                     return Padding(
                       padding: EdgeInsets.symmetric(horizontal: 8),
                       child: TodoItemTile(

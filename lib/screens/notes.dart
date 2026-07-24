@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:core';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:test_app/components/delete_modal.dart';
 import 'package:test_app/components/note_tile.dart';
@@ -9,7 +11,7 @@ import 'package:test_app/events/delete_event.dart';
 class NoteItemData {
   final String id;
   final String title;
-  final String content;
+  final List<dynamic> content;
 
   const NoteItemData({
     required this.id,
@@ -30,42 +32,72 @@ class _NotesScreenState extends State<NotesScreen> {
     const NoteItemData(
       id: '1',
       title: 'Groceries',
-      content: 'Buy milk, eggs, and bread.',
+      content: [
+        {"insert": "Buy milk, eggs, and bread.\n"},
+      ],
     ),
     const NoteItemData(
       id: '2',
       title: 'Project Ideas',
-      content: 'Build a dark-themed Note-taking app in Flutter.',
+      content: [
+        {"insert": "Build a dark-themed Note-taking app in Flutter.\n"},
+      ],
     ),
     const NoteItemData(
       id: '3',
       title: 'Reminders',
-      content: 'Call Mom tomorrow at 10 AM.',
+      content: [
+        {"insert": "Buy milk, eggs, and bread.\nTest"},
+        {
+          "insert": "\n",
+          "attributes": {"list": "checked"},
+        },
+        {"insert": "It"},
+        {
+          "insert": "\n",
+          "attributes": {"list": "unchecked"},
+        },
+        {"insert": "Sure"},
+        {
+          "insert": "\n",
+          "attributes": {"list": "unchecked"},
+        },
+      ],
     ),
     const NoteItemData(
       id: '4',
       title: 'Reminders',
-      content: 'Call Mom tomorrow at 10 AM.',
+      content: [
+        {"insert": "Call Mom tomorrow at 10 AM.\n"},
+      ],
     ),
     const NoteItemData(
       id: '5',
       title: 'Reminders',
-      content: 'Call Mom tomorrow at 10 AM.',
+      content: [
+        {"insert": "Call Mom tomorrow at 10 AM.\n"},
+      ],
     ),
     const NoteItemData(
       id: '6',
       title: 'Reminders',
-      content: 'Call Mom tomorrow at 10 AM.',
+      content: [
+        {"insert": "Call Mom tomorrow at 10 AM.\n"},
+      ],
     ),
     const NoteItemData(
       id: '7',
       title: 'Reminders',
-      content: 'Call Mom tomorrow at 10 AM.',
+      content: [
+        {"insert": "Call Mom tomorrow at 10 AM.\n"},
+      ],
     ),
     const NoteItemData(
       id: '8',
       title: 'Reminders',
-      content: 'Call Mom tomorrow at 10 AM.',
+      content: [
+        {"insert": "Call Mom tomorrow at 10 AM.\n"},
+      ],
     ),
   ];
 
@@ -172,6 +204,9 @@ class _NotesScreenState extends State<NotesScreen> {
     final bool isEmpty = _notes.isEmpty;
     final bool showSearch = _notes.length > 6;
 
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(statusBarColor: Colors.amber),
+    );
     return Scaffold(
       body: CustomScrollView(
         slivers: [
@@ -207,8 +242,8 @@ class _NotesScreenState extends State<NotesScreen> {
                             onTap: checkState
                                 ? null
                                 : () => context.push(
-                                    '/test',
-                                    // extra: {"type": "note"},
+                                    '/search',
+                                    extra: {"type": "note"},
                                   ),
                             borderRadius: BorderRadius.circular(6),
                             child: Container(

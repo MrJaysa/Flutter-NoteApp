@@ -4,7 +4,6 @@ import 'package:test_app/screens/note_modification.dart';
 import 'package:test_app/screens/notes.dart';
 import 'package:test_app/screens/search.dart';
 import 'package:test_app/screens/settings.dart';
-import 'package:test_app/screens/test.dart';
 import 'package:test_app/screens/todos.dart';
 
 final GoRouter appRouter = GoRouter(
@@ -37,7 +36,8 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/add-note',
       builder: (context, state) {
-        final Map<String, String>? extra = state.extra as Map<String, String>?;
+        final extra = state.extra as Map<String, dynamic>?;
+
         return AddNoteScreen(
           id: extra?['id'],
           title: extra?['title'],
@@ -58,10 +58,6 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/settings',
       builder: (context, state) => const SettingsScreen(),
-    ),
-    GoRoute(
-      path: '/test',
-      builder: (context, state) => const ChecklistNoteScreen(),
     ),
   ],
 );

@@ -66,7 +66,7 @@ class DeleteEventBus {
   }
 
   void emitClose(bool value) {
-    _state = _state.copyWith(deleteNoteClicked: value);
+    _state = _state.copyWith(backBtnClose: value);
     _controller.add(_state);
   }
 

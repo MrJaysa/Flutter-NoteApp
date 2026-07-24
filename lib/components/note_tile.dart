@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 class NoteCard extends StatelessWidget {
   final String id;
   final String title;
-  final String content;
+  final List<dynamic> content;
   final Function longPress;
   final bool checkBoxVisible;
   final bool isChecked;
@@ -64,7 +64,7 @@ class NoteCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      content,
+                      content[0]['insert'],
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSecondaryFixedVariant,
                       ),
