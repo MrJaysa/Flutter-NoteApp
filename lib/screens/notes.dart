@@ -1,22 +1,28 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:core';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:test_app/components/delete_modal.dart';
+import 'package:isar_community/isar.dart';
 import 'package:test_app/components/note_tile.dart';
 import 'package:test_app/events/delete_event.dart';
+import 'package:test_app/modals/delete_modal.dart';
+import 'package:test_app/models/model.dart';
+import 'package:test_app/models/note_db.dart';
 
 class NoteItemData {
   final String id;
-  final String title;
+  final String? title;
   final List<dynamic> content;
+  final DateTime time;
 
   const NoteItemData({
     required this.id,
     required this.title,
     required this.content,
+    required this.time,
   });
 }
 
@@ -28,81 +34,13 @@ class NotesScreen extends StatefulWidget {
 }
 
 class _NotesScreenState extends State<NotesScreen> {
-  final List<NoteItemData> _notes = [
-    const NoteItemData(
-      id: '1',
-      title: 'Groceries',
-      content: [
-        {"insert": "Buy milk, eggs, and bread.\n"},
-      ],
-    ),
-    const NoteItemData(
-      id: '2',
-      title: 'Project Ideas',
-      content: [
-        {"insert": "Build a dark-themed Note-taking app in Flutter.\n"},
-      ],
-    ),
-    const NoteItemData(
-      id: '3',
-      title: 'Reminders',
-      content: [
-        {"insert": "Buy milk, eggs, and bread.\nTest"},
-        {
-          "insert": "\n",
-          "attributes": {"list": "checked"},
-        },
-        {"insert": "It"},
-        {
-          "insert": "\n",
-          "attributes": {"list": "unchecked"},
-        },
-        {"insert": "Sure"},
-        {
-          "insert": "\n",
-          "attributes": {"list": "unchecked"},
-        },
-      ],
-    ),
-    const NoteItemData(
-      id: '4',
-      title: 'Reminders',
-      content: [
-        {"insert": "Call Mom tomorrow at 10 AM.\n"},
-      ],
-    ),
-    const NoteItemData(
-      id: '5',
-      title: 'Reminders',
-      content: [
-        {"insert": "Call Mom tomorrow at 10 AM.\n"},
-      ],
-    ),
-    const NoteItemData(
-      id: '6',
-      title: 'Reminders',
-      content: [
-        {"insert": "Call Mom tomorrow at 10 AM.\n"},
-      ],
-    ),
-    const NoteItemData(
-      id: '7',
-      title: 'Reminders',
-      content: [
-        {"insert": "Call Mom tomorrow at 10 AM.\n"},
-      ],
-    ),
-    const NoteItemData(
-      id: '8',
-      title: 'Reminders',
-      content: [
-        {"insert": "Call Mom tomorrow at 10 AM.\n"},
-      ],
-    ),
-  ];
+  List<NoteItemData> _notes = [];
+  final List<String> _selectedNotes = [];
+  final collection = db.collection<NoteData>();
+
+  late Query<NoteData> query = collection.where().sortByUpdatedAtDesc().build();
 
   bool checkState = false;
-  final List<String> _selectedNotes = [];
 
   void _longPressDetected(String id) {
     setState(() {
@@ -145,24 +83,27 @@ class _NotesScreenState extends State<NotesScreen> {
     return '$count Items Selected';
   }
 
-  Future<bool?> showDeleteDialog(BuildContext context, int selectedCount) {
-    return showModalBottomSheet<bool>(
-      context: context,
-      useRootNavigator: true,
-      backgroundColor: const Color(0xFF1E1E1E),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (_) => DeleteDialog(selectedCount: selectedCount, type: "Note"),
-    );
-  }
-
-  // ignore: unused_field
   late StreamSubscription<bool> _subscription;
+  late final StreamSubscription<List<NoteData>> _notesSubscription;
 
   @override
   void initState() {
     super.initState();
+
+    _notesSubscription = query.watch(fireImmediately: true).listen((notes) {
+      if (!mounted) return;
+
+      setState(() {
+        _notes = notes.map((note) {
+          return NoteItemData(
+            id: note.id.toString(),
+            title: note.title,
+            content: jsonDecode(note.contentDelta ?? ''),
+            time: note.updatedAt,
+          );
+        }).toList();
+      });
+    });
 
     _subscription = deleteEventBus.deleteNoteClickedStream.listen((
       clicked,
@@ -196,6 +137,7 @@ class _NotesScreenState extends State<NotesScreen> {
   @override
   void dispose() {
     _subscription.cancel();
+    _notesSubscription.cancel();
     super.dispose();
   }
 
@@ -420,8 +362,9 @@ class _NotesScreenState extends State<NotesScreen> {
                     child: NoteCard(
                       key: ValueKey(note.id),
                       id: note.id,
-                      title: note.title,
+                      title: note.title ?? '',
                       content: note.content,
+                      time: note.time,
                       longPress: () => _longPressDetected(note.id),
                       checkBoxVisible: checkState,
                       isChecked: _selectedNotes.contains(note.id),

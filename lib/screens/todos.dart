@@ -158,6 +158,19 @@ class _TodosScreenState extends State<TodosScreen> {
     );
   }
 
+  void _showTodoDialog({String? text, DateTime? date}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useRootNavigator: true,
+      backgroundColor: const Color(0xFF1E1E1E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => AddTodoSheet(title: text, date: date),
+    );
+  }
+
   // ignore: unused_field
   late StreamSubscription<bool> _subscription;
 
@@ -437,6 +450,8 @@ class _TodosScreenState extends State<TodosScreen> {
                       toggleDone: toggleDone,
                       longPress: _longPressDetected,
                       onCheckedChanged: checkToggle,
+                      onEdit: () =>
+                          _showTodoDialog(text: todo.title, date: todo.time),
                       isChecked: _selectedTodos.pending.contains(todo.id),
                     ),
                   );
@@ -503,6 +518,8 @@ class _TodosScreenState extends State<TodosScreen> {
                         toggleDone: toggleDone,
                         longPress: _longPressDetected,
                         onCheckedChanged: checkToggle,
+                        onEdit: () =>
+                            _showTodoDialog(text: todo.title, date: todo.time),
                         isChecked: _selectedTodos.completed.contains(todo.id),
                       ),
                     );
@@ -517,20 +534,7 @@ class _TodosScreenState extends State<TodosScreen> {
 
       floatingActionButton: !checkState
           ? FloatingActionButton(
-              onPressed: () {
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  useRootNavigator: true,
-                  backgroundColor: const Color(0xFF1E1E1E),
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(24),
-                    ),
-                  ),
-                  builder: (_) => const AddTodoSheet(),
-                );
-              },
+              onPressed: _showTodoDialog,
               backgroundColor: const Color(0xFF2B2A2A),
               foregroundColor: Colors.amber,
               shape: const CircleBorder(),

@@ -1,12 +1,31 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_quill/flutter_quill.dart' as quill;
+import 'package:flutter_quill/flutter_quill.dart'
+    show
+        Attribute,
+        BlockEmbed,
+        ChangeSource,
+        DefaultListBlockStyle,
+        DefaultStyles,
+        DefaultTextBlockStyle,
+        DocChange,
+        Document,
+        HorizontalSpacing,
+        Line,
+        QuillController,
+        QuillEditor,
+        QuillEditorConfig,
+        VerticalSpacing;
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:test_app/components/custom_keyboard/formatting_toolbar.dart';
-import 'package:test_app/components/custom_quill_checkbox.dart';
 import 'package:test_app/components/custom_quill_image_view.dart';
+import 'package:test_app/modals/delete_modal.dart';
+import 'package:test_app/models/model.dart';
+import 'package:test_app/models/note_db.dart';
 
 class AddNoteScreen extends StatefulWidget {
   final String? id;
@@ -21,30 +40,18 @@ class AddNoteScreen extends StatefulWidget {
 
 class _AddNoteScreenState extends State<AddNoteScreen> {
   final TextEditingController _titleController = TextEditingController();
-  late final quill.QuillController _quillController;
+  late final QuillController _quillController;
 
   final FocusNode _noteFocusNode = FocusNode();
 
   bool _hasContent = false;
   bool _showUndoRedo = false;
+  String? _noteId;
+
+  Timer? _saveTimer;
 
   bool _showFormattingToolbar = false;
-
-  void _listenToKeyPressEnter(quill.DocChange change) {
-    final delta = change.change;
-
-    for (final op in delta.toList()) {
-      if (op.isInsert &&
-          op.data is String &&
-          (op.data as String).contains('\n')) {
-        final currentStyle = _quillController.getSelectionStyle();
-
-        if (currentStyle.attributes.containsKey(quill.Attribute.checked.key)) {
-          _quillController.formatSelection(quill.Attribute.unchecked);
-        }
-      }
-    }
-  }
+  bool _toolbarLoaded = false;
 
   void _updateHasContent() {
     final hasContent =
@@ -52,35 +59,117 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
         !_quillController.document.isEmpty();
 
     if (hasContent != _hasContent) {
-      setState(() {
-        _hasContent = hasContent;
-      });
+      _hasContent = hasContent;
     }
 
+    _saveTimer?.cancel();
+
+    _saveTimer = Timer(const Duration(milliseconds: 500), () async {
+      if (!_hasContent) {
+        if (_noteId != null) {
+          await db.writeTxn(() async {
+            await db.collection<NoteData>().delete(int.parse(_noteId!));
+          });
+
+          _noteId = null;
+        }
+
+        return;
+      }
+
+      await _saveData();
+    });
     setState(() {});
   }
 
-  void _saveData() {
+  void _listenToKeyPressEnter(DocChange change) {
+    for (final op in change.change.toList()) {
+      if (!op.isInsert || op.data is! String) continue;
+
+      if (!(op.data as String).contains('\n')) continue;
+
+      final selection = _quillController.selection;
+
+      final previousLine = _quillController.document.queryChild(
+        selection.baseOffset - 1,
+      );
+
+      if (!previousLine.node!.style.attributes.containsKey(
+        Attribute.checked.key,
+      )) {
+        return;
+      }
+
+      if (previousLine.node!.style.attributes[Attribute.list.key]?.value ==
+              'ordered' ||
+          previousLine.node!.style.attributes[Attribute.list.key]?.value ==
+              'bullet') {
+        continue;
+      }
+
+      final currentLine = _quillController.document.queryChild(
+        selection.baseOffset,
+      );
+
+      if (currentLine.node!.style.attributes.containsKey(
+        Attribute.checked.key,
+      )) {
+        _quillController.formatText(
+          selection.baseOffset,
+          0,
+          Attribute.unchecked,
+        );
+      }
+    }
+  }
+
+  Future<void> _saveData() async {
     final contentJson = jsonEncode(
       _quillController.document.toDelta().toJson(),
     );
 
-    debugPrint('Saving content: $contentJson');
-    if (widget.id != null) {
-      debugPrint(widget.id);
-    } else {
-      debugPrint('create new');
+    final plainContent = _quillController.document.toPlainText();
+
+    final note = NoteData(
+      title: _titleController.text.trim(),
+      contentDelta: contentJson,
+      contentText: plainContent,
+      updatedAt: DateTime.now(),
+    );
+
+    if (_noteId != null) {
+      final id = int.tryParse(_noteId!);
+
+      if (id != null) {
+        note.id = id;
+      }
+    }
+
+    final saveId = await db.writeTxn(() async {
+      return await db.collection<NoteData>().put(note);
+    });
+
+    _noteId ??= "$saveId";
+  }
+
+  Future<void> _deleteNote() async {
+    if (!mounted) return;
+
+    final confirmed = await showDeleteDialog(context, 1);
+
+    if (confirmed == true) {
+      await db.writeTxn(() async {
+        await db.collection<NoteData>().delete(int.parse(_noteId!));
+      });
+      if (mounted) {
+        context.pop();
+      }
     }
   }
 
-  void _deleteNote() {
-    final id = widget.id;
-    debugPrint('delete note $id');
-  }
-
-  quill.QuillController _initializeQuillContent(List<dynamic>? content) {
+  QuillController _initializeQuillContent(List<dynamic>? content) {
     if (content == null || content.isEmpty) {
-      return quill.QuillController.basic();
+      return QuillController.basic();
     }
 
     final delta = List<dynamic>.from(content);
@@ -91,8 +180,8 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
       delta.add({'insert': '\n'});
     }
 
-    return quill.QuillController(
-      document: quill.Document.fromJson(delta),
+    return QuillController(
+      document: Document.fromJson(delta),
       selection: const TextSelection.collapsed(offset: 0),
     );
   }
@@ -100,6 +189,8 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
   @override
   void initState() {
     super.initState();
+
+    _noteId = widget.id;
 
     if (widget.title != null) {
       _titleController.text = widget.title!;
@@ -113,18 +204,29 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
 
     _titleController.addListener(_updateHasContent);
     _quillController.document.changes.listen((_) => _updateHasContent());
-
     _quillController.document.changes.listen(_listenToKeyPressEnter);
 
     _noteFocusNode.addListener(() {
-      if (_showUndoRedo != _noteFocusNode.hasFocus) {
-        setState(() {
-          _showUndoRedo = _noteFocusNode.hasFocus;
-        });
-      }
-      setState(() {
+      bool needsRebuild = false;
+
+      if (_showFormattingToolbar) {
         _showFormattingToolbar = false;
-      });
+        needsRebuild = true;
+      }
+
+      if (_showUndoRedo != _noteFocusNode.hasFocus) {
+        _showUndoRedo = _noteFocusNode.hasFocus;
+
+        if (!_toolbarLoaded) {
+          _toolbarLoaded = true;
+        }
+
+        needsRebuild = true;
+      }
+
+      if (needsRebuild) {
+        setState(() {});
+      }
     });
   }
 
@@ -142,8 +244,8 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
 
     final queryResult = _quillController.document.queryChild(currentOffset);
 
-    if (queryResult.node != null && queryResult.node is quill.Line) {
-      final quill.Line currentLineNode = queryResult.node as quill.Line;
+    if (queryResult.node != null && queryResult.node is Line) {
+      final Line currentLineNode = queryResult.node as Line;
 
       final int lineStart = currentLineNode.documentOffset;
       final int lineEnd = lineStart + currentLineNode.length - 1;
@@ -170,8 +272,8 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
     final style = _quillController.getSelectionStyle();
 
     final isChecklist =
-        style.attributes.containsKey(quill.Attribute.checked.key) ||
-        style.attributes.containsKey(quill.Attribute.unchecked.key);
+        style.attributes.containsKey(Attribute.checked.key) ||
+        style.attributes.containsKey(Attribute.unchecked.key);
 
     final bounds = getLineBounds();
 
@@ -181,50 +283,50 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
       if (lineEnd > 0) {
         _quillController.updateSelection(
           TextSelection.collapsed(offset: lineEnd),
-          quill.ChangeSource.local,
+          ChangeSource.local,
         );
 
         _quillController.document.insert(lineEnd, '\n');
 
         _quillController.updateSelection(
           TextSelection.collapsed(offset: lineEnd + 1),
-          quill.ChangeSource.local,
+          ChangeSource.local,
         );
 
         _quillController.formatSelection(
-          quill.Attribute.clone(quill.Attribute.unchecked, null),
+          Attribute.clone(Attribute.unchecked, null),
         );
 
         final imageIndex = _quillController.selection.baseOffset;
 
         _quillController.document.insert(
           imageIndex,
-          quill.BlockEmbed.image(image.path),
+          BlockEmbed.image(image.path),
         );
 
         _quillController.document.insert(imageIndex + 1, '\n');
 
         _quillController.updateSelection(
           TextSelection.collapsed(offset: imageIndex + 2),
-          quill.ChangeSource.local,
+          ChangeSource.local,
         );
       } else {
         _quillController.formatSelection(
-          quill.Attribute.clone(quill.Attribute.unchecked, null),
+          Attribute.clone(Attribute.unchecked, null),
         );
 
         final imageIndex = _quillController.selection.baseOffset;
 
         _quillController.document.insert(
           imageIndex,
-          quill.BlockEmbed.image(image.path),
+          BlockEmbed.image(image.path),
         );
 
         _quillController.document.insert(imageIndex + 1, '\n');
 
         _quillController.updateSelection(
           TextSelection.collapsed(offset: imageIndex + 2),
-          quill.ChangeSource.local,
+          ChangeSource.local,
         );
       }
 
@@ -234,33 +336,30 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
     if (lineEnd > 0) {
       _quillController.updateSelection(
         TextSelection.collapsed(offset: lineEnd),
-        quill.ChangeSource.local,
+        ChangeSource.local,
       );
 
       _quillController.document.insert(lineEnd, '\n');
 
       _quillController.document.insert(
         lineEnd + 1,
-        quill.BlockEmbed.image(image.path),
+        BlockEmbed.image(image.path),
       );
 
       _quillController.document.insert(lineEnd + 2, '\n');
 
       _quillController.updateSelection(
         TextSelection.collapsed(offset: lineEnd + 3),
-        quill.ChangeSource.local,
+        ChangeSource.local,
       );
     } else {
-      _quillController.document.insert(
-        lineStart,
-        quill.BlockEmbed.image(image.path),
-      );
+      _quillController.document.insert(lineStart, BlockEmbed.image(image.path));
 
       _quillController.document.insert(lineStart + 1, '\n');
 
       _quillController.updateSelection(
         TextSelection.collapsed(offset: lineStart + 2),
-        quill.ChangeSource.local,
+        ChangeSource.local,
       );
     }
   }
@@ -277,25 +376,31 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
   }
 
   void _checkboxToggler() {
-    final isChecklist =
-        _quillController.getSelectionStyle().attributes.containsKey(
-          quill.Attribute.unchecked.key,
-        ) ||
-        _quillController.getSelectionStyle().attributes.containsKey(
-          quill.Attribute.checked.key,
-        );
+    final isChecklist = _quillController
+        .getSelectionStyle()
+        .attributes
+        .containsKey(Attribute.unchecked.key);
+
+    if (isChecklist) {
+      _quillController.formatSelection(
+        Attribute.clone(Attribute.unchecked, null),
+      );
+    } else {
+      _quillController.formatSelection(Attribute.unchecked);
+    }
 
     if (_showFormattingToolbar) {
       setState(() {
         _showFormattingToolbar = false;
       });
     }
-    if (isChecklist) {
-      _quillController.formatSelection(
-        quill.Attribute.clone(quill.Attribute.unchecked, null),
-      );
-    } else {
-      _quillController.formatSelection(quill.Attribute.unchecked);
+  }
+
+  void _checkFormattingToolbar() {
+    if (_showFormattingToolbar) {
+      setState(() {
+        _showFormattingToolbar = false;
+      });
     }
   }
 
@@ -338,14 +443,20 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
             if (_showUndoRedo)
               IconButton(
                 onPressed: _quillController.hasUndo
-                    ? () => _quillController.undo()
+                    ? () {
+                        _quillController.undo();
+                        _checkFormattingToolbar();
+                      }
                     : null,
                 icon: const Icon(Icons.undo),
               ),
             if (_showUndoRedo)
               IconButton(
                 onPressed: _quillController.hasRedo
-                    ? () => _quillController.redo()
+                    ? () {
+                        _quillController.redo();
+                        _checkFormattingToolbar();
+                      }
                     : null,
                 icon: const Icon(Icons.redo),
               ),
@@ -366,7 +477,6 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 32),
                   child: Column(
                     children: [
-                      const SizedBox(height: 36),
                       TextField(
                         controller: _titleController,
                         cursorColor: Colors.amber,
@@ -387,6 +497,7 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
                       ),
 
                       const SizedBox(height: 8),
+
                       Expanded(
                         child: Theme(
                           data: Theme.of(context).copyWith(
@@ -395,11 +506,21 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
                               selectionColor: Color(0x66FFC107),
                               selectionHandleColor: Colors.amber,
                             ),
+                            checkboxTheme: CheckboxThemeData(
+                              fillColor: WidgetStateProperty.resolveWith((
+                                states,
+                              ) {
+                                return states.contains(WidgetState.selected)
+                                    ? Colors.amber
+                                    : Colors.transparent;
+                              }),
+                              checkColor: WidgetStateProperty.all(Colors.white),
+                            ),
                           ),
-                          child: quill.QuillEditor.basic(
+                          child: QuillEditor.basic(
                             controller: _quillController,
                             focusNode: _noteFocusNode,
-                            config: quill.QuillEditorConfig(
+                            config: QuillEditorConfig(
                               onTapDown: (details, getPosition) {
                                 _editorTapped();
                                 return false;
@@ -414,37 +535,139 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
                                 bottom: 20,
                               ),
                               embedBuilders: [CustomImageEmbedBuilder()],
-                              customStyles: quill.DefaultStyles(
-                                placeHolder: quill.DefaultTextBlockStyle(
+                              // ignore: experimental_member_use
+                              customLeadingBlockBuilder: (node, config) {
+                                final listAttr =
+                                    node.style.attributes[Attribute.list.key];
+
+                                if (listAttr != null) {
+                                  if (listAttr.value == Attribute.ul.value) {
+                                    return Container(
+                                      width: config.width,
+                                      alignment: Alignment.centerRight,
+                                      padding: const EdgeInsets.only(
+                                        right: 15.0,
+                                        top: 4,
+                                      ),
+                                      child: const Icon(
+                                        Icons.fiber_manual_record,
+                                        size: 7.0,
+                                      ),
+                                    );
+                                  }
+
+                                  if (listAttr.value == Attribute.ol.value) {
+                                    int olCount = 1;
+                                    final currentIndent =
+                                        node
+                                            .style
+                                            .attributes[Attribute.indent.key]
+                                            ?.value ??
+                                        0;
+
+                                    var previousNode = node.previous;
+                                    while (previousNode != null) {
+                                      final prevListAttr = previousNode
+                                          .style
+                                          .attributes[Attribute.list.key];
+                                      final prevIndent =
+                                          previousNode
+                                              .style
+                                              .attributes[Attribute.indent.key]
+                                              ?.value ??
+                                          0;
+
+                                      if (prevIndent != currentIndent) {
+                                        break;
+                                      }
+
+                                      if (prevListAttr != null &&
+                                          prevListAttr.value ==
+                                              Attribute.ol.value) {
+                                        olCount++;
+                                      } else if (prevListAttr != null &&
+                                          prevListAttr.value ==
+                                              Attribute.ul.value) {
+                                      } else {
+                                        break;
+                                      }
+                                      previousNode = previousNode.previous;
+                                    }
+
+                                    return Container(
+                                      width: config.width,
+                                      alignment: Alignment.centerRight,
+                                      padding: const EdgeInsets.only(
+                                        right: 10.0,
+                                        top: 3,
+                                      ),
+                                      child: Text(
+                                        '$olCount.',
+                                        style: config.style,
+                                      ),
+                                    );
+                                  }
+                                }
+                                return null;
+                              },
+
+                              customStyleBuilder: (Attribute attribute) {
+                                if (attribute.value == 'checked') {
+                                  return TextStyle(
+                                    foreground: Paint()
+                                      ..colorFilter = ColorFilter.mode(
+                                        const Color.fromARGB(
+                                          57,
+                                          108,
+                                          108,
+                                          108,
+                                        ).withAlpha(150),
+                                        BlendMode.srcATop,
+                                      ),
+                                  );
+                                }
+                                return const TextStyle();
+                              },
+                              customStyles: DefaultStyles(
+                                placeHolder: DefaultTextBlockStyle(
                                   const TextStyle(
                                     color: Colors.white38,
                                     fontSize: 18,
+                                    height: 1.45,
                                   ),
-                                  quill.HorizontalSpacing.zero,
-                                  quill.VerticalSpacing.zero,
-                                  quill.VerticalSpacing.zero,
+                                  HorizontalSpacing.zero,
+                                  const VerticalSpacing(4, 5),
+                                  const VerticalSpacing(4, 5),
                                   null,
                                 ),
-                                lists: quill.DefaultListBlockStyle(
-                                  const TextStyle(
-                                    fontSize: 18,
-                                    color: Colors.white,
-                                  ),
-                                  const quill.HorizontalSpacing(0, 0),
-                                  const quill.VerticalSpacing(0, 5),
-                                  const quill.VerticalSpacing(0, 5),
-                                  null,
-                                  CustomQuillCheckboxBuilder(),
-                                ),
-                                paragraph: quill.DefaultTextBlockStyle(
+                                indent: DefaultTextBlockStyle(
                                   const TextStyle(
                                     color: Colors.white,
                                     fontSize: 18,
                                     height: 1.45,
                                   ),
-                                  quill.HorizontalSpacing.zero,
-                                  const quill.VerticalSpacing(0, 3),
-                                  quill.VerticalSpacing.zero,
+                                  HorizontalSpacing.zero,
+                                  const VerticalSpacing(4, 5),
+                                  const VerticalSpacing(4, 5),
+                                  null,
+                                ),
+                                lists: DefaultListBlockStyle(
+                                  const TextStyle(fontSize: 18, height: 1.45),
+                                  HorizontalSpacing.zero,
+                                  const VerticalSpacing(4, 5),
+                                  const VerticalSpacing(4, 5),
+                                  null,
+                                  null,
+                                ),
+                                paragraph: DefaultTextBlockStyle(
+                                  const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    height: 1.45,
+                                  ),
+                                  HorizontalSpacing.zero,
+                                  const VerticalSpacing(4, 5),
+                                  const VerticalSpacing(4, 5),
                                   null,
                                 ),
                               ),
@@ -507,8 +730,13 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
                     ),
                   ),
 
-                  if (_showFormattingToolbar && _showUndoRedo)
-                    FormattingToolbar(controller: _quillController),
+                  if (_toolbarLoaded)
+                    Offstage(
+                      offstage: !(_showFormattingToolbar && _showUndoRedo),
+                      child: _toolbarLoaded
+                          ? FormattingToolbar(controller: _quillController)
+                          : SizedBox.shrink(),
+                    ),
                 ],
               ),
             ],

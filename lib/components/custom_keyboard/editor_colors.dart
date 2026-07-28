@@ -13,7 +13,6 @@ class EditorColors {
 
   static const textColors = <Color>[
     Colors.white,
-    Color(0xFF8E8E8E),
     Color(0xFFE53935),
     Color(0xFFFFA000),
     Color(0xFF2979FF),

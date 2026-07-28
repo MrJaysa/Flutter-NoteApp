@@ -11,6 +11,7 @@ class TodoItemTile extends StatelessWidget {
   final Function toggleDone;
   final Function longPress;
   final Function onCheckedChanged;
+  final Function onEdit;
 
   const TodoItemTile({
     super.key,
@@ -23,6 +24,7 @@ class TodoItemTile extends StatelessWidget {
     required this.toggleDone,
     required this.longPress,
     required this.onCheckedChanged,
+    required this.onEdit,
   });
 
   @override
@@ -30,8 +32,9 @@ class TodoItemTile extends StatelessWidget {
     final theme = Theme.of(context);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () =>
-          checkBoxVisible ? onCheckedChanged(!isChecked, id, isDone) : null,
+      onTap: checkBoxVisible
+          ? () => onCheckedChanged(!isChecked, id, isDone)
+          : null,
       onLongPress: () => checkBoxVisible ? null : longPress(id, isDone),
       child: Card(
         elevation: 0,
@@ -51,40 +54,44 @@ class TodoItemTile extends StatelessWidget {
                 ),
               const SizedBox(width: 8),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 3,
-                      overflow: TextOverflow
-                          .ellipsis, // Clean fallback if text exceeds 3 lines
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        decoration: isDone
-                            ? TextDecoration.lineThrough
-                            : TextDecoration.none,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: checkBoxVisible ? null : () => onEdit(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 3,
+                        overflow: TextOverflow
+                            .ellipsis, // Clean fallback if text exceeds 3 lines
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          decoration: isDone
+                              ? TextDecoration.lineThrough
+                              : TextDecoration.none,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.alarm_outlined,
-                          size: 14,
-                          color: Colors.blueGrey,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          DateFormat('MM/dd HH:mm').format(time),
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSecondaryFixedVariant,
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.alarm_outlined,
+                            size: 14,
+                            color: Colors.blueGrey,
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                          const SizedBox(width: 8),
+                          Text(
+                            DateFormat('MM/dd HH:mm').format(time),
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSecondaryFixedVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
               if (checkBoxVisible)

@@ -4,15 +4,20 @@ import 'package:intl/intl.dart';
 import 'package:test_app/components/reminder_modal/reminder_picker.dart';
 
 class AddTodoSheet extends StatefulWidget {
-  const AddTodoSheet({super.key});
+  final String? title;
+  final DateTime? date;
+
+  const AddTodoSheet({super.key, this.title, this.date});
 
   @override
   State<AddTodoSheet> createState() => _AddTodoSheetState();
 }
 
 class _AddTodoSheetState extends State<AddTodoSheet> {
-  final TextEditingController _todoController = TextEditingController();
-  DateTime? selectedDate;
+  late final TextEditingController _todoController = TextEditingController(
+    text: widget.title,
+  );
+  late DateTime? selectedDate = widget.date;
   bool canSave = false;
 
   @override
@@ -96,9 +101,9 @@ class _AddTodoSheetState extends State<AddTodoSheet> {
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
-              'New Todo',
-              style: TextStyle(
+            Text(
+              widget.title != null ? 'Edit Todo' : 'New Todo',
+              style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,

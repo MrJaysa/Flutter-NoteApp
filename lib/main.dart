@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:test_app/models/model.dart';
 import 'package:test_app/router.dart';
 
 void main() async {
+  await Database.instance.init();
   runApp(const MyApp());
 }
 
@@ -31,6 +33,7 @@ class MyApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(
             seedColor: Colors.white,
             brightness: Brightness.light,
+            primary: Colors.amber,
           ),
         ),
         darkTheme: ThemeData(
@@ -38,6 +41,7 @@ class MyApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(
             seedColor: Colors.white,
             brightness: Brightness.dark,
+            primary: Colors.amber,
           ),
         ),
 

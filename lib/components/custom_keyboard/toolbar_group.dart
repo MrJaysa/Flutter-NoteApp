@@ -10,6 +10,24 @@ class ToolbarGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    List<Widget> splitChildren = [];
+
+    for (int i = 0; i < children.length; i++) {
+      splitChildren.add(Expanded(child: children[i]));
+
+      if (i < children.length - 1) {
+        splitChildren.add(
+          VerticalDivider(
+            color: Colors.black.withValues(alpha: 0.3),
+            width: 1,
+            thickness: 1,
+            indent: 1,
+            endIndent: 1,
+          ),
+        );
+      }
+    }
+
     return SizedBox(
       height: height,
       child: Material(
@@ -18,9 +36,7 @@ class ToolbarGroup extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(14),
-          child: Row(
-            children: children.map((child) => Expanded(child: child)).toList(),
-          ),
+          child: Row(children: splitChildren),
         ),
       ),
     );

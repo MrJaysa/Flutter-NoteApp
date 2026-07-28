@@ -1,10 +1,17 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:test_app/helpers/date_formatter.dart';
+import 'package:test_app/helpers/note_preview.dart';
+
+enum NotePreviewType { checkbox, list, image, text }
 
 class NoteCard extends StatelessWidget {
   final String id;
   final String title;
   final List<dynamic> content;
+  final DateTime time;
   final Function longPress;
   final bool checkBoxVisible;
   final bool isChecked;
@@ -19,11 +26,14 @@ class NoteCard extends StatelessWidget {
     required this.checkBoxVisible,
     required this.isChecked,
     required this.onCheckedChanged,
+    required this.time,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    final preview = getNotePreview(title, content);
 
     void handleAction() {
       if (checkBoxVisible) {
@@ -35,6 +45,8 @@ class NoteCard extends StatelessWidget {
         );
       }
     }
+
+    debugPrint('test ${preview.image != ''}');
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -50,27 +62,58 @@ class NoteCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      title,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          preview.title,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          spacing: 10,
+                          children: [
+                            Text(
+                              formatRelativeDate(time),
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color:
+                                    theme.colorScheme.onSecondaryFixedVariant,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (preview.text != '')
+                              Text(
+                                preview.text,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color:
+                                      theme.colorScheme.onSecondaryFixedVariant,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                          ],
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      content[0]['insert'],
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSecondaryFixedVariant,
+                    if (preview.image != '')
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8.0),
+                        child: Image.file(
+                          File(preview.image ?? ""),
+                          fit: BoxFit.cover,
+                          height: 50,
+                          width: 50,
+                        ),
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
                   ],
                 ),
               ),
