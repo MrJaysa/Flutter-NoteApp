@@ -1,13 +1,17 @@
-// lib/src/components/add_todo_sheet.dart
+import 'package:Notich/components/reminder_modal/reminder_picker.dart';
+import 'package:Notich/helpers/notification.dart';
+import 'package:Notich/models/model.dart';
+import 'package:Notich/models/todo_db.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:test_app/components/reminder_modal/reminder_picker.dart';
 
 class AddTodoSheet extends StatefulWidget {
   final String? title;
   final DateTime? date;
+  final int? id;
+  final bool? isDone;
 
-  const AddTodoSheet({super.key, this.title, this.date});
+  const AddTodoSheet({super.key, this.title, this.date, this.id, this.isDone});
 
   @override
   State<AddTodoSheet> createState() => _AddTodoSheetState();
@@ -20,23 +24,6 @@ class _AddTodoSheetState extends State<AddTodoSheet> {
   late DateTime? selectedDate = widget.date;
   bool canSave = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _todoController.addListener(() {
-      final value = _todoController.text.trim().isNotEmpty;
-      if (value != canSave) {
-        setState(() => canSave = value);
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _todoController.dispose();
-    super.dispose();
-  }
-
   Future<void> _pickDateTime() async {
     final result = await showGeneralDialog<DateTime>(
       context: context,
@@ -44,8 +31,7 @@ class _AddTodoSheetState extends State<AddTodoSheet> {
       barrierLabel: 'Reminder',
       barrierColor: Colors.black54,
       transitionDuration: const Duration(milliseconds: 200),
-      pageBuilder: (_, _, _) =>
-          ReminderPicker(initialDate: selectedDate ?? DateTime.now()),
+      pageBuilder: (_, _, _) => ReminderPicker(initialDate: DateTime.now()),
       transitionBuilder: (context, animation, secondaryAnimation, child) {
         return FadeTransition(
           opacity: animation,
@@ -69,21 +55,70 @@ class _AddTodoSheetState extends State<AddTodoSheet> {
   }
 
   Future<void> _saveData() async {
+    final perm = await NotificationService().verifyNotificationPermission();
+
+    final todo = TodoData(
+      title: _todoController.text.trim(),
+      time: selectedDate,
+      updatedAt: DateTime.now(),
+      completed: false,
+    );
+
+    if (widget.id != null) {
+      final id = widget.id;
+      final done = widget.isDone;
+      todo.id = id!;
+      todo.completed = done == true;
+    }
+
+    final todoId = await db.writeTxn(() async {
+      return await db.collection<TodoData>().put(todo);
+    });
+
+    if (perm && await NotificationService().notificationExists(todoId)) {
+      await NotificationService().plugin.cancel(id: todoId);
+    }
+
+    if (perm && selectedDate != null && selectedDate!.isAfter(DateTime.now())) {
+      await NotificationService().scheduleTodoAlarm(
+        id: todoId,
+        title: _todoController.text.trim(),
+        time: selectedDate!,
+      );
+    }
+
+    if (!mounted) return;
     Navigator.of(context).pop();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    _todoController.addListener(() {
+      final value = _todoController.text.trim().isNotEmpty;
+      if (value != canSave) {
+        setState(() => canSave = value);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _todoController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    // 1. Wrap the entire layout inside a native SafeArea
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
           left: 20,
           right: 20,
           top: 20,
-          // 2. Adjusts automatically for the typing keyboard height
           bottom: MediaQuery.of(context).viewInsets.bottom + 12,
         ),
         child: Column(

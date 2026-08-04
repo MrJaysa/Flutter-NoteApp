@@ -1,6 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:Notich/components/custom_keyboard/formatting_toolbar.dart';
+import 'package:Notich/components/custom_quill_image_view.dart';
+import 'package:Notich/helpers/note_preview.dart';
+import 'package:Notich/modals/delete_modal.dart';
+import 'package:Notich/models/model.dart';
+import 'package:Notich/models/note_db.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_quill/flutter_quill.dart'
@@ -21,11 +27,6 @@ import 'package:flutter_quill/flutter_quill.dart'
         VerticalSpacing;
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:test_app/components/custom_keyboard/formatting_toolbar.dart';
-import 'package:test_app/components/custom_quill_image_view.dart';
-import 'package:test_app/modals/delete_modal.dart';
-import 'package:test_app/models/model.dart';
-import 'package:test_app/models/note_db.dart';
 
 class AddNoteScreen extends StatefulWidget {
   final String? id;
@@ -54,32 +55,38 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
   bool _toolbarLoaded = false;
 
   void _updateHasContent() {
+    final plainContent = _quillController.document.toPlainText().trim();
+
+    final searchText = _titleController.text.isNotEmpty
+        ? "${_titleController.text} $plainContent"
+        : plainContent;
+
     final hasContent =
-        _titleController.text.trim().isNotEmpty ||
-        !_quillController.document.isEmpty();
+        (_titleController.text.trim().isNotEmpty ||
+            !_quillController.document.isEmpty()) &&
+        searchText.isNotEmpty;
 
     if (hasContent != _hasContent) {
       _hasContent = hasContent;
-    }
+      _saveTimer?.cancel();
 
-    _saveTimer?.cancel();
+      _saveTimer = Timer(const Duration(milliseconds: 500), () async {
+        if (!_hasContent) {
+          if (_noteId != null) {
+            await db.writeTxn(() async {
+              await db.collection<NoteData>().delete(int.parse(_noteId!));
+            });
 
-    _saveTimer = Timer(const Duration(milliseconds: 500), () async {
-      if (!_hasContent) {
-        if (_noteId != null) {
-          await db.writeTxn(() async {
-            await db.collection<NoteData>().delete(int.parse(_noteId!));
-          });
+            _noteId = null;
+          }
 
-          _noteId = null;
+          return;
         }
 
-        return;
-      }
-
-      await _saveData();
-    });
-    setState(() {});
+        await _saveData();
+      });
+      setState(() {});
+    }
   }
 
   void _listenToKeyPressEnter(DocChange change) {
@@ -128,28 +135,39 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
       _quillController.document.toDelta().toJson(),
     );
 
-    final plainContent = _quillController.document.toPlainText();
+    final plainContent = _quillController.document.toPlainText().trim();
 
-    final note = NoteData(
-      title: _titleController.text.trim(),
-      contentDelta: contentJson,
-      contentText: plainContent,
-      updatedAt: DateTime.now(),
+    final preview = getNotePreview(
+      _titleController.text.trim(),
+      _quillController.document.toDelta().toJson(),
     );
 
-    if (_noteId != null) {
-      final id = int.tryParse(_noteId!);
+    final searchText = _titleController.text.isNotEmpty
+        ? "${_titleController.text} $plainContent"
+        : "$plainContent ${preview.title}";
 
-      if (id != null) {
-        note.id = id;
+    if (searchText.isNotEmpty) {
+      final note = NoteData(
+        title: _titleController.text.trim(),
+        contentDelta: contentJson,
+        contentText: searchText.trim(),
+        updatedAt: DateTime.now(),
+      );
+
+      if (_noteId != null) {
+        final id = int.tryParse(_noteId!);
+
+        if (id != null) {
+          note.id = id;
+        }
       }
+
+      final saveId = await db.writeTxn(() async {
+        return await db.collection<NoteData>().put(note);
+      });
+
+      _noteId ??= "$saveId";
     }
-
-    final saveId = await db.writeTxn(() async {
-      return await db.collection<NoteData>().put(note);
-    });
-
-    _noteId ??= "$saveId";
   }
 
   Future<void> _deleteNote() async {
@@ -534,7 +552,11 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
                                 right: 0,
                                 bottom: 20,
                               ),
-                              embedBuilders: [CustomImageEmbedBuilder()],
+                              embedBuilders: [
+                                CustomImageEmbedBuilder(
+                                  controller: _quillController,
+                                ),
+                              ],
                               // ignore: experimental_member_use
                               customLeadingBlockBuilder: (node, config) {
                                 final listAttr =

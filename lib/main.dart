@@ -1,10 +1,14 @@
+import 'package:Notich/helpers/notification.dart';
+import 'package:Notich/models/model.dart';
+import 'package:Notich/router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:test_app/models/model.dart';
-import 'package:test_app/router.dart';
 
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
   await Database.instance.init();
+  await NotificationService().init();
   runApp(const MyApp());
 }
 

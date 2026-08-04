@@ -2,29 +2,15 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
 
+import 'package:Notich/components/note_tile.dart';
+import 'package:Notich/enums/note_item.dart';
+import 'package:Notich/events/delete_event.dart';
+import 'package:Notich/modals/delete_modal.dart';
+import 'package:Notich/models/model.dart';
+import 'package:Notich/models/note_db.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:isar_community/isar.dart';
-import 'package:test_app/components/note_tile.dart';
-import 'package:test_app/events/delete_event.dart';
-import 'package:test_app/modals/delete_modal.dart';
-import 'package:test_app/models/model.dart';
-import 'package:test_app/models/note_db.dart';
-
-class NoteItemData {
-  final String id;
-  final String? title;
-  final List<dynamic> content;
-  final DateTime time;
-
-  const NoteItemData({
-    required this.id,
-    required this.title,
-    required this.content,
-    required this.time,
-  });
-}
 
 class NotesScreen extends StatefulWidget {
   const NotesScreen({super.key});
@@ -38,7 +24,10 @@ class _NotesScreenState extends State<NotesScreen> {
   final List<String> _selectedNotes = [];
   final collection = db.collection<NoteData>();
 
-  late Query<NoteData> query = collection.where().sortByUpdatedAtDesc().build();
+  late final Query<NoteData> _query = collection
+      .where()
+      .sortByUpdatedAtDesc()
+      .build();
 
   bool checkState = false;
 
@@ -90,9 +79,7 @@ class _NotesScreenState extends State<NotesScreen> {
   void initState() {
     super.initState();
 
-    _notesSubscription = query.watch(fireImmediately: true).listen((notes) {
-      if (!mounted) return;
-
+    _notesSubscription = _query.watch(fireImmediately: true).listen((notes) {
       setState(() {
         _notes = notes.map((note) {
           return NoteItemData(
@@ -120,8 +107,8 @@ class _NotesScreenState extends State<NotesScreen> {
       deleteEventBus.emitDeleteNoteClicked(false);
 
       if (confirmed == true) {
-        setState(() {
-          _notes.removeWhere((note) => _selectedNotes.contains(note.id));
+        await db.writeTxn(() async {
+          await collection.deleteAll(_selectedNotes.map(int.parse).toList());
         });
         _clearSelection();
       }
@@ -146,34 +133,58 @@ class _NotesScreenState extends State<NotesScreen> {
     final bool isEmpty = _notes.isEmpty;
     final bool showSearch = _notes.length > 6;
 
-    SystemChrome.setSystemUIOverlayStyle(
-      SystemUiOverlayStyle(statusBarColor: Colors.amber),
-    );
     return Scaffold(
       body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
         slivers: [
-          if (showSearch)
-            SliverAppBar.medium(
-              expandedHeight: 180,
-              collapsedHeight: 140,
-              flexibleSpace: FlexibleSpaceBar(
-                centerTitle: false,
-                titlePadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                collapseMode: CollapseMode.parallax,
-                title: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      appBarTitle,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
+          SliverAppBar.medium(
+            expandedHeight: showSearch ? 180 : null,
+            collapsedHeight: showSearch ? 140 : null,
+            foregroundColor: Colors.white,
+            backgroundColor: WidgetStateColor.resolveWith((states) {
+              if (states.contains(WidgetState.scrolledUnder)) {
+                return Colors.black;
+              }
+              return Colors.transparent;
+            }),
+            actions: checkState
+                ? [
+                    IconButton(
+                      onPressed: _clearSelection,
+                      icon: const Icon(Icons.close),
                     ),
-
+                    Checkbox(
+                      value:
+                          _selectedNotes.length == _notes.length &&
+                          _notes.isNotEmpty,
+                      onChanged: (value) => _selectionToggle(value ?? false),
+                      activeColor: Colors.amber,
+                      checkColor: Colors.white,
+                    ),
+                  ]
+                : [
+                    IconButton(
+                      onPressed: () => context.push('/settings'),
+                      icon: const Icon(Icons.settings),
+                    ),
+                  ],
+            flexibleSpace: FlexibleSpaceBar(
+              centerTitle: false,
+              collapseMode: CollapseMode.parallax,
+              titlePadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              title: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    appBarTitle,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  if (showSearch) ...[
                     const SizedBox(height: 8),
-
                     Hero(
                       tag: 'note',
                       child: Material(
@@ -187,8 +198,8 @@ class _NotesScreenState extends State<NotesScreen> {
                                     '/search',
                                     extra: {"type": "note"},
                                   ),
-                            borderRadius: BorderRadius.circular(6),
-                            child: Container(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Ink(
                               height: 35,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 5,
@@ -220,9 +231,7 @@ class _NotesScreenState extends State<NotesScreen> {
                                             104,
                                           ),
                                   ),
-
                                   const SizedBox(width: 3),
-
                                   Text(
                                     'Search',
                                     style: TextStyle(
@@ -246,85 +255,10 @@ class _NotesScreenState extends State<NotesScreen> {
                       ),
                     ),
                   ],
-                ),
+                ],
               ),
-
-              backgroundColor: WidgetStateColor.resolveWith((states) {
-                if (states.contains(WidgetState.scrolledUnder)) {
-                  return Colors.black;
-                }
-                return Colors.transparent;
-              }),
-
-              foregroundColor: Colors.white,
-
-              actions: checkState
-                  ? [
-                      IconButton(
-                        onPressed: _clearSelection,
-                        icon: const Icon(Icons.close),
-                      ),
-                      Checkbox(
-                        value:
-                            _selectedNotes.length == _notes.length &&
-                            _notes.isNotEmpty,
-                        onChanged: (value) => _selectionToggle(value ?? false),
-                        activeColor: Colors.amber,
-                        checkColor: Colors.white,
-                      ),
-                    ]
-                  : [
-                      IconButton(
-                        onPressed: () => context.push('/settings'),
-                        icon: const Icon(Icons.settings),
-                      ),
-                    ],
-            )
-          else
-            SliverAppBar.medium(
-              flexibleSpace: FlexibleSpaceBar(
-                title: Text(
-                  appBarTitle,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                centerTitle: false,
-                titlePadding: EdgeInsetsDirectional.only(start: 16, bottom: 16),
-                collapseMode: CollapseMode.parallax,
-              ),
-
-              backgroundColor: WidgetStateColor.resolveWith((states) {
-                if (states.contains(WidgetState.scrolledUnder)) {
-                  return Colors.black;
-                }
-                return Colors.transparent;
-              }),
-
-              foregroundColor: Colors.white,
-              actions: checkState
-                  ? [
-                      IconButton(
-                        onPressed: _clearSelection,
-                        icon: const Icon(Icons.close),
-                      ),
-                      Checkbox(
-                        value:
-                            _selectedNotes.length == _notes.length &&
-                            _notes.isNotEmpty,
-                        onChanged: (value) => _selectionToggle(value ?? false),
-                        activeColor: Colors.amber,
-                        checkColor: Colors.white,
-                      ),
-                    ]
-                  : [
-                      IconButton(
-                        onPressed: () => context.push('/settings'),
-                        icon: const Icon(Icons.settings),
-                      ),
-                    ],
             ),
+          ),
 
           if (isEmpty)
             SliverFillRemaining(

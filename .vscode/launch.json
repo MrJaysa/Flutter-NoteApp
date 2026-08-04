@@ -2,20 +2,20 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "test_app",
+      "name": "Notich",
       "request": "launch",
       "type": "dart",
       "flutterMode": "debug",
       "args": ["--quiet"]
     },
     {
-      "name": "test_app (profile mode)",
+      "name": "Notich (profile mode)",
       "request": "launch",
       "type": "dart",
       "flutterMode": "profile"
     },
     {
-      "name": "test_app (release mode)",
+      "name": "Notich (release mode)",
       "request": "launch",
       "type": "dart",
       "flutterMode": "release"

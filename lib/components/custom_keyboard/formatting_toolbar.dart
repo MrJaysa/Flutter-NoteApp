@@ -1,11 +1,11 @@
+import 'package:Notich/components/custom_keyboard/background_palette.dart';
+import 'package:Notich/components/custom_keyboard/color_palette.dart';
+import 'package:Notich/components/custom_keyboard/editor_colors.dart';
+import 'package:Notich/components/custom_keyboard/toolbar_btn.dart';
+import 'package:Notich/components/custom_keyboard/toolbar_group.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart'
     show QuillController, Attribute, IndentAttribute;
-import 'package:test_app/components/custom_keyboard/background_palette.dart';
-import 'package:test_app/components/custom_keyboard/color_palette.dart';
-import 'package:test_app/components/custom_keyboard/editor_colors.dart';
-import 'package:test_app/components/custom_keyboard/toolbar_btn.dart';
-import 'package:test_app/components/custom_keyboard/toolbar_group.dart';
 
 class FormattingToolbar extends StatefulWidget {
   final QuillController controller;

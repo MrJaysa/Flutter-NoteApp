@@ -1,6 +1,7 @@
+import 'package:Notich/models/note_db.dart';
+import 'package:Notich/models/todo_db.dart';
 import 'package:isar_community/isar.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:test_app/models/note_db.dart';
 
 class Database {
   Database._();
@@ -14,7 +15,10 @@ class Database {
   Future<void> init() async {
     final dir = await getApplicationDocumentsDirectory();
 
-    _db = await Isar.open([NoteDataSchema], directory: dir.path);
+    _db = await Isar.open([
+      NoteDataSchema,
+      TodoDataSchema,
+    ], directory: dir.path);
   }
 }
 

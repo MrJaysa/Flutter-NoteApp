@@ -1,3 +1,4 @@
+import 'package:Notich/helpers/notification.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -25,21 +26,25 @@ class _ReminderPickerState extends State<ReminderPicker> {
     return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
   }
 
+  Future<void> initializeLocalNotification() async {
+    await NotificationService().requestionNotificationPermission();
+  }
+
   @override
   void initState() {
     super.initState();
+    initializeLocalNotification();
 
     final today = DateTime.now();
 
-    final daysInRange =
-        ((today.year % 4 == 0 && today.year % 100 != 0) ||
-            (today.year % 400 == 0))
-        ? 366
-        : 365;
+    final startOfYear = DateTime(today.year, 1, 1);
+    final startOfNextYear = DateTime(today.year + 1, 1, 1);
+
+    final daysInYear = startOfNextYear.difference(startOfYear).inDays;
 
     _days = List.generate(
-      daysInRange,
-      (i) => DateTime(today.year, today.month, today.day + i),
+      daysInYear,
+      (i) => startOfYear.add(Duration(days: i)),
     );
 
     _dayIndex = _days.indexWhere(
@@ -88,6 +93,7 @@ class _ReminderPickerState extends State<ReminderPicker> {
                         padding: const EdgeInsets.symmetric(horizontal: 18),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
+                          spacing: 6,
                           children: [
                             ReminderWheel(
                               width: 150,
@@ -101,7 +107,6 @@ class _ReminderPickerState extends State<ReminderPicker> {
                                 });
                               },
                             ),
-                            const SizedBox(width: 6),
                             ReminderWheel(
                               width: 60,
                               items: List.generate(
@@ -115,7 +120,6 @@ class _ReminderPickerState extends State<ReminderPicker> {
                                 });
                               },
                             ),
-                            const SizedBox(width: 6),
                             ReminderWheel(
                               width: 60,
                               items: List.generate(

@@ -1,9 +1,9 @@
 import 'dart:io';
 
+import 'package:Notich/helpers/date_formatter.dart';
+import 'package:Notich/helpers/note_preview.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:test_app/helpers/date_formatter.dart';
-import 'package:test_app/helpers/note_preview.dart';
 
 enum NotePreviewType { checkbox, list, image, text }
 
@@ -45,8 +45,6 @@ class NoteCard extends StatelessWidget {
         );
       }
     }
-
-    debugPrint('test ${preview.image != ''}');
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -104,7 +102,7 @@ class NoteCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    if (preview.image != '')
+                    if (preview.image != null)
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8.0),
                         child: Image.file(

@@ -1,5 +1,5 @@
+import 'package:Notich/components/delete_modal.dart';
 import 'package:flutter/material.dart';
-import 'package:test_app/components/delete_modal.dart';
 
 Future<bool?> showDeleteDialog(BuildContext context, int selectedCount) {
   return showModalBottomSheet<bool>(

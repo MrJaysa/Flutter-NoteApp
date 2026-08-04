@@ -1,22 +1,28 @@
 import 'dart:async';
 
+import 'package:Notich/components/add_todo_sheet.dart';
+import 'package:Notich/components/delete_modal.dart';
+import 'package:Notich/components/todo_pop_menu.dart';
+import 'package:Notich/components/todo_tile.dart';
+import 'package:Notich/events/delete_event.dart';
+import 'package:Notich/helpers/notification.dart';
+import 'package:Notich/models/model.dart';
+import 'package:Notich/models/todo_db.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:test_app/components/add_todo_sheet.dart';
-import 'package:test_app/components/delete_modal.dart';
-import 'package:test_app/components/todo_pop_menu.dart';
-import 'package:test_app/components/todo_tile.dart';
-import 'package:test_app/events/delete_event.dart';
+import 'package:isar_community/isar.dart';
 
 class TodoItemData {
   final String id;
   final String title;
-  final DateTime time;
+  final DateTime? time;
+  final bool? completed;
 
   const TodoItemData({
     required this.id,
     required this.title,
-    required this.time,
+    this.completed,
+    this.time,
   });
 }
 
@@ -37,40 +43,83 @@ class TodosScreen extends StatefulWidget {
 }
 
 class _TodosScreenState extends State<TodosScreen> {
+  List<TodoItemData> _pendingTodos = [];
+  List<TodoItemData> _doneTodos = [];
+  final SelectedTodos _selectedTodos = SelectedTodos();
+  final collection = db.collection<TodoData>();
+  bool _sortNewestFirst = true;
+
+  Query<TodoData> _buildQuery({required bool state}) {
+    return _sortNewestFirst
+        ? collection
+              .filter()
+              .completedEqualTo(state)
+              .sortByUpdatedAtDesc()
+              .build()
+        : collection.filter().completedEqualTo(state).sortByTimeDesc().build();
+  }
+
+  late Query<TodoData> _pendingTodosQuery = _buildQuery(state: false);
+  late Query<TodoData> _doneTodosQuery = _buildQuery(state: true);
+
   bool completedExpanded = false;
   bool checkState = false;
 
-  final List<TodoItemData> _pendingTodos = [
-    TodoItemData(id: '1', title: "Testing_1", time: DateTime.now()),
-    TodoItemData(id: '2', title: "Testing_2", time: DateTime.now()),
-    TodoItemData(id: '3', title: "Testing_3", time: DateTime.now()),
-    TodoItemData(id: '4', title: "Testing_4", time: DateTime.now()),
-  ];
+  String get appBarTitle {
+    if (!checkState) return 'To-do';
 
-  final List<TodoItemData> _doneTodos = [
-    TodoItemData(id: '5', title: "Testing_5", time: DateTime.now()),
-    TodoItemData(id: '6', title: "Testing_6", time: DateTime.now()),
-    TodoItemData(id: '7', title: "Testing_7", time: DateTime.now()),
-    TodoItemData(id: '8', title: "Testing_8", time: DateTime.now()),
-  ];
+    final count =
+        _selectedTodos.pending.length + _selectedTodos.completed.length;
 
-  final SelectedTodos _selectedTodos = SelectedTodos();
+    if (count == 0) return 'None Selected';
+    if (count == 1) return '1 Item Selected';
+    return '$count Items Selected';
+  }
 
-  void toggleDone(bool state, String id, bool isDone) {
-    setState(() {
-      if (!isDone) {
-        final index = _pendingTodos.indexWhere((todo) => todo.id == id);
-        if (index == -1) return;
+  void _sortControl(String newSortRule) {
+    _sortNewestFirst = newSortRule == 'latest';
 
-        final todo = _pendingTodos.removeAt(index);
-        _doneTodos.insert(0, todo); // Prepend
-      } else {
-        final index = _doneTodos.indexWhere((todo) => todo.id == id);
-        if (index == -1) return;
+    _pendingSubscription.cancel();
+    _doneSubscription.cancel();
 
-        final todo = _doneTodos.removeAt(index);
-        _pendingTodos.insert(0, todo); // Prepend
+    _pendingTodosQuery = _buildQuery(state: false);
+    _doneTodosQuery = _buildQuery(state: true);
+
+    _startWatching();
+  }
+
+  void _toggleDone(bool state, String id, bool isDone) async {
+    if (!isDone) {
+      if (await NotificationService().notificationExists(int.parse(id))) {
+        await NotificationService().plugin.cancel(id: int.parse(id));
       }
+    }
+
+    await db.writeTxn(() async {
+      final todo = await collection.get(int.parse(id));
+
+      if (todo!.time != null) {
+        if (isDone && todo.time!.isAfter(DateTime.now())) {
+          final perm = await NotificationService()
+              .verifyNotificationPermission();
+          if (perm && await NotificationService().notificationExists(todo.id)) {
+            await NotificationService().plugin.cancel(id: todo.id);
+          }
+
+          if (perm && todo.time != null && todo.time!.isAfter(DateTime.now())) {
+            await NotificationService().scheduleTodoAlarm(
+              id: todo.id,
+              title: todo.title!,
+              time: todo.time!,
+            );
+          }
+        }
+      }
+
+      todo.completed = !isDone;
+      todo.updatedAt = DateTime.now();
+
+      await collection.put(todo);
     });
   }
 
@@ -87,7 +136,7 @@ class _TodosScreenState extends State<TodosScreen> {
     deleteEventBus.emitDeletable(true);
   }
 
-  void checkToggle(bool checked, String id, bool isDone) {
+  void _checkToggle(bool checked, String id, bool isDone) {
     setState(() {
       if (checked) {
         if (isDone) {
@@ -103,27 +152,27 @@ class _TodosScreenState extends State<TodosScreen> {
         }
       }
     });
+
     deleteEventBus.emitDeletable(
       _selectedTodos.completed.isNotEmpty || _selectedTodos.pending.isNotEmpty,
     );
   }
 
   void _selectionToggle(bool selected) {
-    setState(() {
-      if (selected) {
-        _selectedTodos.pending
-          ..clear()
-          ..addAll(_pendingTodos.map((e) => e.id));
-        _selectedTodos.completed
-          ..clear()
-          ..addAll(_doneTodos.map((e) => e.id));
-        deleteEventBus.emitDeletable(true);
-      } else {
-        _selectedTodos.completed.clear();
-        _selectedTodos.pending.clear();
-        deleteEventBus.emitDeletable(false);
-      }
-    });
+    if (selected) {
+      _selectedTodos.pending
+        ..clear()
+        ..addAll(_pendingTodos.map((e) => e.id));
+      _selectedTodos.completed
+        ..clear()
+        ..addAll(_doneTodos.map((e) => e.id));
+      deleteEventBus.emitDeletable(true);
+    } else {
+      _selectedTodos.completed.clear();
+      _selectedTodos.pending.clear();
+      deleteEventBus.emitDeletable(false);
+    }
+    setState(() {});
   }
 
   void _clearSelection() {
@@ -133,17 +182,6 @@ class _TodosScreenState extends State<TodosScreen> {
       _selectedTodos.pending.clear();
     });
     deleteEventBus.emitChecked(false);
-  }
-
-  String get appBarTitle {
-    if (!checkState) return 'To-do';
-
-    final count =
-        _selectedTodos.pending.length + _selectedTodos.completed.length;
-
-    if (count == 0) return 'None Selected';
-    if (count == 1) return '1 Item Selected';
-    return '$count Items Selected';
   }
 
   Future<bool?> showDeleteDialog(BuildContext context, int selectedCount) {
@@ -158,7 +196,7 @@ class _TodosScreenState extends State<TodosScreen> {
     );
   }
 
-  void _showTodoDialog({String? text, DateTime? date}) {
+  void _showTodoDialog({String? text, DateTime? date, int? id, bool? isDone}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -167,16 +205,76 @@ class _TodosScreenState extends State<TodosScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => AddTodoSheet(title: text, date: date),
+      builder: (_) =>
+          AddTodoSheet(title: text, date: date, id: id, isDone: isDone),
     );
   }
 
-  // ignore: unused_field
   late StreamSubscription<bool> _subscription;
+  late StreamSubscription<List<TodoData>> _pendingSubscription;
+  late StreamSubscription<List<TodoData>> _doneSubscription;
+
+  void _startWatching() {
+    _pendingSubscription = _pendingTodosQuery
+        .watch(fireImmediately: true)
+        .listen((todos) {
+          setState(() {
+            _pendingTodos = todos.map((todo) {
+              return TodoItemData(
+                id: todo.id.toString(),
+                title: todo.title ??= '',
+                time: todo.time,
+                completed: todo.completed,
+              );
+            }).toList();
+          });
+        });
+
+    _doneSubscription = _doneTodosQuery.watch(fireImmediately: true).listen((
+      todos,
+    ) {
+      setState(() {
+        _doneTodos = todos.map((todo) {
+          return TodoItemData(
+            id: todo.id.toString(),
+            title: todo.title ??= '',
+            time: todo.time,
+            completed: todo.completed,
+          );
+        }).toList();
+      });
+    });
+  }
+
+  GoRouterDelegate? _routerDelegate;
+  bool _isScreenVisible = true;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _routerDelegate?.removeListener(_onRouteChanged);
+    _routerDelegate = GoRouter.of(context).routerDelegate
+      ..addListener(_onRouteChanged);
+  }
+
+  void _onRouteChanged() {
+    if (!mounted) return;
+
+    final bool currentlyOnTodos =
+        GoRouterState.of(context).uri.path == '/todos';
+
+    if (_isScreenVisible != currentlyOnTodos) {
+      setState(() {
+        _isScreenVisible = currentlyOnTodos;
+      });
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+
+    _startWatching();
 
     _subscription = deleteEventBus.deleteTodoClickedStream.listen((
       clicked,
@@ -193,17 +291,12 @@ class _TodosScreenState extends State<TodosScreen> {
       deleteEventBus.emitDeleteTodoClicked(false);
 
       if (confirmed == true) {
-        setState(() {
-          if (_selectedTodos.pending.isNotEmpty) {
-            _pendingTodos.removeWhere(
-              (note) => _selectedTodos.pending.contains(note.id),
-            );
-          }
-          if (_selectedTodos.completed.isNotEmpty) {
-            _doneTodos.removeWhere(
-              (note) => _selectedTodos.completed.contains(note.id),
-            );
-          }
+        final combined = [
+          ..._selectedTodos.completed,
+          ..._selectedTodos.pending,
+        ];
+        await db.writeTxn(() async {
+          await collection.deleteAll(combined.map(int.parse).toList());
         });
         _clearSelection();
       }
@@ -218,6 +311,8 @@ class _TodosScreenState extends State<TodosScreen> {
 
   @override
   void dispose() {
+    _pendingSubscription.cancel();
+    _doneSubscription.cancel();
     _subscription.cancel();
     super.dispose();
   }
@@ -234,28 +329,51 @@ class _TodosScreenState extends State<TodosScreen> {
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          if (showSearch)
-            SliverAppBar.medium(
-              expandedHeight: 180,
-              collapsedHeight: 140,
-              flexibleSpace: FlexibleSpaceBar(
-                centerTitle: false,
-                titlePadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                collapseMode: CollapseMode.parallax,
-                title: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      appBarTitle,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
+          SliverAppBar.medium(
+            expandedHeight: showSearch ? 180 : null,
+            collapsedHeight: showSearch ? 140 : null,
+            foregroundColor: Colors.white,
+            backgroundColor: WidgetStateColor.resolveWith((states) {
+              if (states.contains(WidgetState.scrolledUnder)) {
+                return Colors.black;
+              }
+              return Colors.transparent;
+            }),
+            actions: checkState
+                ? [
+                    IconButton(
+                      onPressed: _clearSelection,
+                      icon: const Icon(Icons.close),
                     ),
-
+                    Checkbox(
+                      value:
+                          (_selectedTodos.completed.length +
+                                  _selectedTodos.pending.length) ==
+                              (_pendingTodos.length + _doneTodos.length) &&
+                          (_pendingTodos.isNotEmpty || _doneTodos.isNotEmpty),
+                      onChanged: (value) => _selectionToggle(value ?? false),
+                      activeColor: Colors.amber,
+                      checkColor: Colors.white,
+                    ),
+                  ]
+                : [TodoSortMenu(onSortChanged: _sortControl)],
+            flexibleSpace: FlexibleSpaceBar(
+              centerTitle: false,
+              collapseMode: CollapseMode.parallax,
+              titlePadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              title: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    appBarTitle,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  if (showSearch) ...[
                     const SizedBox(height: 8),
-
                     Hero(
                       tag: 'todo',
                       child: Material(
@@ -269,8 +387,8 @@ class _TodosScreenState extends State<TodosScreen> {
                                     '/search',
                                     extra: {"type": "todo"},
                                   ),
-                            borderRadius: BorderRadius.circular(6),
-                            child: Container(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Ink(
                               height: 35,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 5,
@@ -302,9 +420,7 @@ class _TodosScreenState extends State<TodosScreen> {
                                             104,
                                           ),
                                   ),
-
                                   const SizedBox(width: 3),
-
                                   Text(
                                     'Search',
                                     style: TextStyle(
@@ -328,77 +444,10 @@ class _TodosScreenState extends State<TodosScreen> {
                       ),
                     ),
                   ],
-                ),
+                ],
               ),
-
-              backgroundColor: WidgetStateColor.resolveWith((states) {
-                if (states.contains(WidgetState.scrolledUnder)) {
-                  return Colors.black;
-                }
-                return Colors.transparent;
-              }),
-
-              foregroundColor: Colors.white,
-
-              actions: checkState
-                  ? [
-                      IconButton(
-                        onPressed: _clearSelection,
-                        icon: const Icon(Icons.close),
-                      ),
-                      Checkbox(
-                        value:
-                            (_selectedTodos.completed.length +
-                                    _selectedTodos.pending.length) ==
-                                (_pendingTodos.length + _doneTodos.length) &&
-                            (_pendingTodos.isNotEmpty || _doneTodos.isNotEmpty),
-                        onChanged: (value) => _selectionToggle(value ?? false),
-                        activeColor: Colors.amber,
-                        checkColor: Colors.white,
-                      ),
-                    ]
-                  : [TodoSortMenu(onSortChanged: (String newSortRule) {})],
-            )
-          else
-            SliverAppBar.medium(
-              flexibleSpace: FlexibleSpaceBar(
-                title: Text(
-                  appBarTitle,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                centerTitle: false,
-                titlePadding: EdgeInsetsDirectional.only(start: 16, bottom: 16),
-                collapseMode: CollapseMode.parallax,
-              ),
-              backgroundColor: WidgetStateColor.resolveWith((states) {
-                if (states.contains(WidgetState.scrolledUnder)) {
-                  return Colors.black;
-                }
-                return Colors.transparent;
-              }),
-              foregroundColor: Colors.white,
-              actions: checkState
-                  ? [
-                      IconButton(
-                        onPressed: _clearSelection,
-                        icon: const Icon(Icons.close),
-                      ),
-                      Checkbox(
-                        value:
-                            (_selectedTodos.completed.length +
-                                    _selectedTodos.pending.length) ==
-                                (_pendingTodos.length + _doneTodos.length) &&
-                            (_pendingTodos.isNotEmpty || _doneTodos.isNotEmpty),
-                        onChanged: (value) => _selectionToggle(value ?? false),
-                        activeColor: Colors.amber,
-                        checkColor: Colors.white,
-                      ),
-                    ]
-                  : [TodoSortMenu(onSortChanged: (String newSortRule) {})],
             ),
+          ),
 
           if (isPendingEmpty && isDoneEmpty)
             SliverFillRemaining(
@@ -447,12 +496,17 @@ class _TodosScreenState extends State<TodosScreen> {
                       time: todo.time,
                       isDone: false,
                       checkBoxVisible: checkState,
-                      toggleDone: toggleDone,
+                      toggleDone: _toggleDone,
                       longPress: _longPressDetected,
-                      onCheckedChanged: checkToggle,
-                      onEdit: () =>
-                          _showTodoDialog(text: todo.title, date: todo.time),
+                      onCheckedChanged: _checkToggle,
+                      onEdit: () => _showTodoDialog(
+                        text: todo.title,
+                        date: todo.time,
+                        id: int.parse(todo.id),
+                        isDone: todo.completed,
+                      ),
                       isChecked: _selectedTodos.pending.contains(todo.id),
+                      isScreenVisible: _isScreenVisible,
                     ),
                   );
                 }, childCount: _pendingTodos.length),
@@ -515,12 +569,17 @@ class _TodosScreenState extends State<TodosScreen> {
                         time: todo.time,
                         isDone: true,
                         checkBoxVisible: checkState,
-                        toggleDone: toggleDone,
+                        toggleDone: _toggleDone,
                         longPress: _longPressDetected,
-                        onCheckedChanged: checkToggle,
-                        onEdit: () =>
-                            _showTodoDialog(text: todo.title, date: todo.time),
+                        onCheckedChanged: _checkToggle,
+                        onEdit: () => _showTodoDialog(
+                          text: todo.title,
+                          date: todo.time,
+                          id: int.parse(todo.id),
+                          isDone: todo.completed,
+                        ),
                         isChecked: _selectedTodos.completed.contains(todo.id),
+                        isScreenVisible: _isScreenVisible,
                       ),
                     );
                   }, childCount: _doneTodos.length),

@@ -6,13 +6,15 @@ part 'note_db.g.dart';
 class NoteData {
   Id id = Isar.autoIncrement;
 
-  @Index(type: IndexType.value)
   String? title;
 
   String? contentDelta;
 
-  @Index(type: IndexType.value)
   String? contentText;
+
+  @Index(type: IndexType.value, caseSensitive: false)
+  List<String> get contentWords =>
+      contentText == null ? [] : Isar.splitWords(contentText!);
 
   @Index(type: IndexType.value)
   DateTime updatedAt;

@@ -21,7 +21,8 @@ NotePreview getNotePreview(String? title, List<dynamic> delta) {
   bool hasPlainText = false;
 
   String firstText = '';
-  String imageUrl = '';
+  String? imageUrl;
+  bool imageAssigned = false;
 
   String currentLineText = '';
 
@@ -67,8 +68,9 @@ NotePreview getNotePreview(String? title, List<dynamic> delta) {
       }
     } else if (insert is Map && insert.containsKey('image')) {
       hasImage = true;
-      if (imageUrl.isEmpty) {
-        imageUrl = insert['image'].toString();
+      if (!imageAssigned && insert.containsKey('image')) {
+        imageUrl = insert['image'];
+        imageAssigned = true;
       }
     }
   }
@@ -82,7 +84,7 @@ NotePreview getNotePreview(String? title, List<dynamic> delta) {
       type: NotePreviewType.title,
       title: title,
       text: firstText,
-      image: imageUrl.isNotEmpty ? imageUrl : null,
+      image: imageUrl,
     );
   }
 
@@ -104,6 +106,7 @@ NotePreview getNotePreview(String? title, List<dynamic> delta) {
       type: NotePreviewType.checkbox,
       title: 'Check List',
       text: firstText,
+      image: imageUrl,
     );
   }
 
@@ -112,6 +115,7 @@ NotePreview getNotePreview(String? title, List<dynamic> delta) {
       type: NotePreviewType.list,
       title: 'Item List',
       text: firstText,
+      image: imageUrl,
     );
   }
 

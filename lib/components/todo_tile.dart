@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 class TodoItemTile extends StatelessWidget {
   final String id;
   final String title;
-  final DateTime time;
+  final DateTime? time;
   final bool isDone;
   final bool checkBoxVisible;
   final bool isChecked;
@@ -12,12 +12,13 @@ class TodoItemTile extends StatelessWidget {
   final Function longPress;
   final Function onCheckedChanged;
   final Function onEdit;
+  final bool isScreenVisible;
 
   const TodoItemTile({
     super.key,
     required this.id,
     required this.title,
-    required this.time,
+    this.time,
     required this.isDone,
     required this.checkBoxVisible,
     required this.isChecked,
@@ -25,7 +26,25 @@ class TodoItemTile extends StatelessWidget {
     required this.longPress,
     required this.onCheckedChanged,
     required this.onEdit,
+    required this.isScreenVisible,
   });
+
+  Stream<void> _minuteTick() async* {
+    final now = DateTime.now();
+
+    await Future.delayed(
+      Duration(minutes: 1) -
+          Duration(
+            seconds: now.second,
+            milliseconds: now.millisecond,
+            microseconds: now.microsecond,
+          ),
+    );
+
+    yield null;
+
+    yield* Stream.periodic(const Duration(minutes: 1), (_) {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,6 +78,8 @@ class TodoItemTile extends StatelessWidget {
                   onTap: checkBoxVisible ? null : () => onEdit(),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    spacing: 4,
                     children: [
                       Text(
                         title,
@@ -72,24 +93,40 @@ class TodoItemTile extends StatelessWidget {
                               : TextDecoration.none,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.alarm_outlined,
-                            size: 14,
-                            color: Colors.blueGrey,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            DateFormat('MM/dd HH:mm').format(time),
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSecondaryFixedVariant,
+
+                      if (time != null)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          spacing: 8,
+                          children: [
+                            const Icon(
+                              Icons.alarm_outlined,
+                              size: 14,
+                              color: Colors.blueGrey,
                             ),
-                          ),
-                        ],
-                      ),
+                            StreamBuilder<void>(
+                              stream:
+                                  isScreenVisible &&
+                                      time!.isAfter(DateTime.now())
+                                  ? _minuteTick()
+                                  : const Stream.empty(),
+                              builder: (context, snapshot) {
+                                final now = DateTime.now();
+
+                                return Text(
+                                  DateFormat('MM/dd HH:mm').format(time!),
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: time!.isBefore(now) && !isDone
+                                        ? Colors.red
+                                        : theme
+                                              .colorScheme
+                                              .onSecondaryFixedVariant,
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
                     ],
                   ),
                 ),
