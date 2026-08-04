@@ -2,15 +2,17 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
 
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
+import 'package:go_router/go_router.dart';
+import 'package:isar_community/isar.dart';
 import 'package:notich/components/note_tile.dart';
 import 'package:notich/enums/note_item.dart';
+import 'package:notich/events/close_swipable_event.dart';
 import 'package:notich/events/delete_event.dart';
 import 'package:notich/modals/delete_modal.dart';
 import 'package:notich/models/model.dart';
 import 'package:notich/models/note_db.dart';
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:isar_community/isar.dart';
 
 class NotesScreen extends StatefulWidget {
   const NotesScreen({super.key});
@@ -102,6 +104,7 @@ class _NotesScreenState extends State<NotesScreen> {
       final confirmed = await showDeleteDialog(
         navigator.context,
         _selectedNotes.length,
+        "Note",
       );
 
       deleteEventBus.emitDeleteNoteClicked(false);
@@ -132,18 +135,24 @@ class _NotesScreenState extends State<NotesScreen> {
   Widget build(BuildContext context) {
     final bool isEmpty = _notes.isEmpty;
     final bool showSearch = _notes.length > 6;
+    final theme = Theme.of(context);
 
     return Scaffold(
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverAppBar.medium(
+            systemOverlayStyle: const SystemUiOverlayStyle(
+              statusBarColor: Colors.transparent,
+              statusBarIconBrightness: Brightness.dark,
+              statusBarBrightness: Brightness.light,
+            ),
             expandedHeight: showSearch ? 180 : null,
             collapsedHeight: showSearch ? 140 : null,
             foregroundColor: Colors.white,
             backgroundColor: WidgetStateColor.resolveWith((states) {
               if (states.contains(WidgetState.scrolledUnder)) {
-                return Colors.black;
+                return theme.colorScheme.primaryContainer;
               }
               return Colors.transparent;
             }),
@@ -151,7 +160,10 @@ class _NotesScreenState extends State<NotesScreen> {
                 ? [
                     IconButton(
                       onPressed: _clearSelection,
-                      icon: const Icon(Icons.close),
+                      icon: Icon(
+                        Icons.close,
+                        color: theme.colorScheme.tertiary,
+                      ),
                     ),
                     Checkbox(
                       value:
@@ -164,8 +176,14 @@ class _NotesScreenState extends State<NotesScreen> {
                   ]
                 : [
                     IconButton(
-                      onPressed: () => context.push('/settings'),
-                      icon: const Icon(Icons.settings),
+                      onPressed: () => {
+                        closeSwipeableEventBus.emit(),
+                        context.push('/settings'),
+                      },
+                      icon: Icon(
+                        Icons.settings,
+                        color: theme.colorScheme.tertiary,
+                      ),
                     ),
                   ],
             flexibleSpace: FlexibleSpaceBar(
@@ -178,10 +196,7 @@ class _NotesScreenState extends State<NotesScreen> {
                 children: [
                   Text(
                     appBarTitle,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   if (showSearch) ...[
                     const SizedBox(height: 8),
@@ -212,12 +227,11 @@ class _NotesScreenState extends State<NotesScreen> {
                                         51,
                                         51,
                                       ).withValues(alpha: 0.15)
-                                    : Theme.of(
-                                        context,
-                                      ).colorScheme.surfaceContainer,
+                                    : theme.colorScheme.surfaceContainer,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Row(
+                                spacing: 3,
                                 children: [
                                   Icon(
                                     Icons.search,
@@ -231,7 +245,6 @@ class _NotesScreenState extends State<NotesScreen> {
                                             104,
                                           ),
                                   ),
-                                  const SizedBox(width: 3),
                                   Text(
                                     'Search',
                                     style: TextStyle(
@@ -242,7 +255,7 @@ class _NotesScreenState extends State<NotesScreen> {
                                               43,
                                               43,
                                             )
-                                          : Colors.white38,
+                                          : theme.colorScheme.tertiary,
                                       fontSize: 12,
                                       fontWeight: FontWeight.w400,
                                     ),
@@ -266,18 +279,18 @@ class _NotesScreenState extends State<NotesScreen> {
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
+                  children: [
                     Icon(
                       Icons.description_outlined,
                       size: 80,
-                      color: Colors.white30,
+                      color: theme.colorScheme.onSecondary,
                     ),
                     SizedBox(height: 12),
                     Text(
                       'None',
                       style: TextStyle(
                         fontSize: 18,
-                        color: Colors.white30,
+                        color: theme.colorScheme.onSecondary,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -325,7 +338,8 @@ class _NotesScreenState extends State<NotesScreen> {
           ? FloatingActionButton(
               onPressed: () => context.push('/add-note'),
               heroTag: 'notes_fab',
-              backgroundColor: const Color(0xFF2B2A2A),
+              backgroundColor: theme.colorScheme.secondaryContainer,
+              elevation: 5,
               foregroundColor: Colors.amber,
               shape: const CircleBorder(),
               child: const Icon(Icons.add),

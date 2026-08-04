@@ -12,6 +12,8 @@ class ToolbarGroup extends StatelessWidget {
   Widget build(BuildContext context) {
     List<Widget> splitChildren = [];
 
+    final theme = Theme.of(context);
+
     for (int i = 0; i < children.length; i++) {
       splitChildren.add(Expanded(child: children[i]));
 
@@ -31,7 +33,9 @@ class ToolbarGroup extends StatelessWidget {
     return SizedBox(
       height: height,
       child: Material(
-        color: EditorColors.panel,
+        color: theme.brightness == Brightness.light
+            ? const Color.fromARGB(92, 158, 158, 158)
+            : EditorColors.panel,
         borderRadius: BorderRadius.circular(14),
         clipBehavior: Clip.antiAlias,
         child: ClipRRect(

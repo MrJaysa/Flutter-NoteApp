@@ -21,6 +21,8 @@ class DeleteDialog extends StatelessWidget {
         ? 'This ${type.toLowerCase()} will be permanently deleted. This action cannot be undone.'
         : 'These ${typeTitle.toLowerCase()} will be permanently deleted. This action cannot be undone.';
 
+    final theme = Theme.of(context);
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
@@ -37,7 +39,10 @@ class DeleteDialog extends StatelessWidget {
 
             Text(
               description,
-              style: const TextStyle(color: Colors.white70, fontSize: 15),
+              style: TextStyle(
+                color: theme.colorScheme.onSecondary,
+                fontSize: 15,
+              ),
             ),
 
             const SizedBox(height: 28),
@@ -47,9 +52,9 @@ class DeleteDialog extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => Navigator.pop(context, false),
-                    child: const Text(
+                    child: Text(
                       'Cancel',
-                      style: TextStyle(color: Colors.white),
+                      style: TextStyle(color: theme.colorScheme.onTertiary),
                     ),
                   ),
                 ),

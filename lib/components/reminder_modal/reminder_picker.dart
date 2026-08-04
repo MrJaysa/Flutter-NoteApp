@@ -1,6 +1,6 @@
-import 'package:notich/helpers/notification.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:notich/helpers/notification.dart';
 
 import 'reminder_footer.dart';
 import 'reminder_header.dart';
@@ -78,7 +78,6 @@ class _ReminderPickerState extends State<ReminderPicker> {
         child: Align(
           alignment: Alignment.bottomCenter,
           child: Material(
-            color: const Color(0xff2D2D2D),
             borderRadius: BorderRadius.circular(30),
             clipBehavior: Clip.antiAlias,
             child: SizedBox(

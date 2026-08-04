@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:notich/components/display_section.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -25,15 +26,12 @@ class SettingsScreen extends StatelessWidget {
       ),
 
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 32),
-                child: Column(children: [const SizedBox(height: 36)]),
-              ),
-            ),
-          ],
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [const DisplaySection()],
+          ),
         ),
       ),
     );

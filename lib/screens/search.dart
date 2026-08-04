@@ -1,14 +1,15 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
+import 'package:isar_community/isar.dart';
 import 'package:notich/components/add_todo_sheet.dart';
 import 'package:notich/components/note_tile.dart';
 import 'package:notich/components/todo_tile.dart';
+import 'package:notich/events/close_swipable_event.dart';
 import 'package:notich/helpers/notification.dart';
 import 'package:notich/models/model.dart';
 import 'package:notich/models/note_db.dart';
 import 'package:notich/models/todo_db.dart';
-import 'package:flutter/material.dart';
-import 'package:isar_community/isar.dart';
 
 class SearchScreen extends StatefulWidget {
   final String type;
@@ -73,7 +74,6 @@ class _SearchScreenState extends State<SearchScreen> {
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
-      backgroundColor: const Color(0xFF1E1E1E),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -131,6 +131,8 @@ class _SearchScreenState extends State<SearchScreen> {
   void initState() {
     super.initState();
 
+    closeSwipeableEventBus.emit();
+
     if (mounted) {
       Future.delayed(const Duration(milliseconds: 500), () {
         _focusNode.requestFocus();
@@ -147,6 +149,8 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         leadingWidth: 30,
@@ -158,13 +162,19 @@ class _SearchScreenState extends State<SearchScreen> {
             type: MaterialType.transparency,
             child: SearchBar(
               controller: _searchBar,
+              backgroundColor: WidgetStateProperty.all(
+                theme.brightness == Brightness.light
+                    ? const Color.fromARGB(255, 238, 238, 238)
+                    : null,
+              ),
               onChanged: search,
               focusNode: _focusNode,
               autoFocus: false,
               hintText: 'Search',
+              elevation: WidgetStateProperty.all(1),
               hintStyle: WidgetStateProperty.all(
-                const TextStyle(
-                  color: Colors.white38,
+                TextStyle(
+                  color: const Color.fromARGB(201, 128, 128, 128),
                   fontWeight: FontWeight.w400,
                 ),
               ),
@@ -176,6 +186,22 @@ class _SearchScreenState extends State<SearchScreen> {
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
               constraints: const BoxConstraints(minHeight: 50, maxHeight: 50),
+              trailing: _searchBar.text.isEmpty
+                  ? null
+                  : [
+                      IconButton(
+                        icon: Icon(
+                          Icons.close,
+                          color: theme.colorScheme.tertiary,
+                          size: 18,
+                        ),
+                        onPressed: () {
+                          _searchBar.clear();
+                          search('');
+                          setState(() {});
+                        },
+                      ),
+                    ],
             ),
           ),
         ),
@@ -215,6 +241,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     checkBoxVisible: false,
                     isChecked: false,
                     onCheckedChanged: () {},
+                    reload: () => search(_searchBar.text.trim()),
                   );
                 } else {
                   final item = _items[index] as TodoData;
@@ -227,7 +254,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     isDone: item.completed,
                     checkBoxVisible: false,
                     toggleDone: _toggleDone,
-                    longPress: () => {},
+                    longPress: null,
                     onCheckedChanged: () => {},
                     onEdit: () => _showTodoDialog(
                       text: item.title,
@@ -237,6 +264,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     ),
                     isChecked: false,
                     isScreenVisible: false,
+                    reload: () => search(_searchBar.text.trim()),
                   );
                 }
               },

@@ -1,6 +1,7 @@
 // lib/src/components/todo_pop_menu.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:notich/events/close_swipable_event.dart';
 
 class TodoSortMenu extends StatefulWidget {
   final ValueChanged<String> onSortChanged;
@@ -41,6 +42,7 @@ class _TodoSortMenuState extends State<TodoSortMenu> {
   }
 
   void _toggleMenu() {
+    closeSwipeableEventBus.emit();
     _overlayEntry == null ? _openMenu() : _closeMenu();
   }
 
@@ -72,14 +74,14 @@ class _TodoSortMenuState extends State<TodoSortMenu> {
             child: const SizedBox.expand(),
           ),
           Positioned(
-            width: 220,
+            width: 210,
+            right: 10,
             child: CompositedTransformFollower(
               link: _layerLink,
               showWhenUnlinked: false,
               offset: Offset(size.width - 220, size.height + 4),
               child: Material(
                 elevation: 4,
-                color: const Color(0xFF2A2A2A),
                 borderRadius: BorderRadius.circular(16),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -110,17 +112,22 @@ class _TodoSortMenuState extends State<TodoSortMenu> {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          spacing: 4,
           children: [
             SizedBox(
-              width: 24,
+              width: 30,
               child: isSelected
-                  ? const Icon(Icons.check, color: Colors.amber, size: 18)
+                  ? const Icon(Icons.check, color: Colors.amber, size: 24)
                   : null,
             ),
-            const SizedBox(width: 4),
             Text(
               title,
-              style: TextStyle(color: isSelected ? Colors.amber : Colors.white),
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight(500),
+                color: isSelected ? Colors.amber : null,
+              ),
             ),
           ],
         ),
@@ -133,7 +140,7 @@ class _TodoSortMenuState extends State<TodoSortMenu> {
     return CompositedTransformTarget(
       link: _layerLink,
       child: IconButton(
-        icon: const Icon(Icons.sort),
+        icon: Icon(Icons.sort, color: Theme.of(context).colorScheme.tertiary),
         color: _overlayEntry != null ? Colors.amber : Colors.white,
         onPressed: _toggleMenu,
       ),

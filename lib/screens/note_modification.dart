@@ -23,6 +23,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:notich/components/custom_keyboard/formatting_toolbar.dart';
 import 'package:notich/components/custom_quill_image_view.dart';
+import 'package:notich/events/close_swipable_event.dart';
 import 'package:notich/helpers/note_preview.dart';
 import 'package:notich/modals/delete_modal.dart';
 import 'package:notich/models/model.dart';
@@ -176,7 +177,7 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
   Future<void> _deleteNote() async {
     if (!mounted) return;
 
-    final confirmed = await showDeleteDialog(context, 1);
+    final confirmed = await showDeleteDialog(context, 1, "Note");
 
     if (confirmed == true) {
       await db.writeTxn(() async {
@@ -210,6 +211,8 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
   @override
   void initState() {
     super.initState();
+
+    closeSwipeableEventBus.emit();
 
     _noteId = widget.id;
 
@@ -436,6 +439,7 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return PopScope(
       canPop: !_showFormattingToolbar,
       onPopInvokedWithResult: (didPop, result) async {
@@ -469,7 +473,7 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
                         _checkFormattingToolbar();
                       }
                     : null,
-                icon: const Icon(Icons.undo),
+                icon: Icon(Icons.undo, color: theme.colorScheme.tertiary),
               ),
             if (_showUndoRedo)
               IconButton(
@@ -479,12 +483,15 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
                         _checkFormattingToolbar();
                       }
                     : null,
-                icon: const Icon(Icons.redo),
+                icon: Icon(Icons.redo, color: theme.colorScheme.tertiary),
               ),
             if (widget.id != null)
               IconButton(
                 onPressed: _deleteNote,
-                icon: const Icon(Icons.delete_outline_sharp),
+                icon: Icon(
+                  Icons.delete_outline_sharp,
+                  color: theme.colorScheme.tertiary,
+                ),
               ),
             if (_hasContent)
               IconButton(onPressed: _saveData, icon: const Icon(Icons.check)),
@@ -504,13 +511,12 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
                         style: const TextStyle(
                           fontSize: 26,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white,
                         ),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           border: InputBorder.none,
                           hintText: "Title",
                           hintStyle: TextStyle(
-                            color: Colors.white38,
+                            color: theme.colorScheme.tertiary,
                             fontSize: 26,
                             fontWeight: FontWeight.w600,
                           ),
@@ -639,26 +645,22 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
                               customStyleBuilder: (Attribute attribute) {
                                 if (attribute.value == 'checked') {
                                   return TextStyle(
-                                    foreground: Paint()
-                                      ..colorFilter = ColorFilter.mode(
-                                        const Color.fromARGB(
-                                          57,
-                                          108,
-                                          108,
-                                          108,
-                                        ).withAlpha(150),
-                                        BlendMode.srcATop,
-                                      ),
+                                    color: const Color.fromARGB(
+                                      122,
+                                      164,
+                                      164,
+                                      164,
+                                    ),
                                   );
                                 }
                                 return const TextStyle();
                               },
                               customStyles: DefaultStyles(
                                 placeHolder: DefaultTextBlockStyle(
-                                  const TextStyle(
-                                    color: Colors.white38,
+                                  TextStyle(
                                     fontSize: 18,
                                     height: 1.45,
+                                    color: theme.colorScheme.tertiary,
                                   ),
                                   HorizontalSpacing.zero,
                                   const VerticalSpacing(4, 5),
@@ -666,18 +668,18 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
                                   null,
                                 ),
                                 indent: DefaultTextBlockStyle(
-                                  const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    height: 1.45,
-                                  ),
+                                  const TextStyle(fontSize: 18, height: 1.45),
                                   HorizontalSpacing.zero,
                                   const VerticalSpacing(4, 5),
                                   const VerticalSpacing(4, 5),
                                   null,
                                 ),
                                 lists: DefaultListBlockStyle(
-                                  const TextStyle(fontSize: 18, height: 1.45),
+                                  TextStyle(
+                                    fontSize: 18,
+                                    height: 1.45,
+                                    color: theme.colorScheme.onTertiary,
+                                  ),
                                   HorizontalSpacing.zero,
                                   const VerticalSpacing(4, 5),
                                   const VerticalSpacing(4, 5),
@@ -685,11 +687,7 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
                                   null,
                                 ),
                                 paragraph: DefaultTextBlockStyle(
-                                  const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    height: 1.45,
-                                  ),
+                                  const TextStyle(fontSize: 18, height: 1.45),
                                   HorizontalSpacing.zero,
                                   const VerticalSpacing(4, 5),
                                   const VerticalSpacing(4, 5),
@@ -711,7 +709,7 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
                   Container(
                     height: 64,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainerLow,
+                      color: theme.colorScheme.surfaceContainerLow,
                       border: Border(
                         top: BorderSide(color: Colors.white.withAlpha(13)),
                       ),
@@ -726,7 +724,9 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
                             color: _showUndoRedo
                                 ? _showFormattingToolbar
                                       ? Colors.amber
-                                      : Colors.white70
+                                      : theme.colorScheme.onSecondary
+                                : theme.brightness == Brightness.light
+                                ? const Color.fromARGB(92, 158, 158, 158)
                                 : Colors.white24,
                             size: 28,
                           ),
@@ -736,7 +736,9 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
                           icon: Icon(
                             Icons.camera_alt_outlined,
                             color: _showUndoRedo
-                                ? Colors.white70
+                                ? theme.colorScheme.onSecondary
+                                : theme.brightness == Brightness.light
+                                ? const Color.fromARGB(92, 158, 158, 158)
                                 : Colors.white24,
                             size: 28,
                           ),
@@ -746,7 +748,9 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
                           icon: Icon(
                             Icons.check_box_outlined,
                             color: _showUndoRedo
-                                ? Colors.white70
+                                ? theme.colorScheme.onSecondary
+                                : theme.brightness == Brightness.light
+                                ? const Color.fromARGB(92, 158, 158, 158)
                                 : Colors.white24,
                             size: 28,
                           ),

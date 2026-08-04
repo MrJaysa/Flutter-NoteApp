@@ -1,8 +1,10 @@
 import 'dart:async';
 
-import 'package:notich/events/delete_event.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
+import 'package:notich/events/close_swipable_event.dart';
+import 'package:notich/events/delete_event.dart';
 
 class MainTabLayout extends StatefulWidget {
   final StatefulNavigationShell navigationShell;
@@ -41,6 +43,7 @@ class _MainTabLayoutState extends State<MainTabLayout> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return PopScope(
       canPop: !deleteItems,
       onPopInvokedWithResult: (didPop, result) {
@@ -48,96 +51,106 @@ class _MainTabLayoutState extends State<MainTabLayout> {
           deleteEventBus.emitClose(true);
         }
       },
-      child: Scaffold(
-        body: widget.navigationShell,
+      child: SlidableAutoCloseBehavior(
+        child: Scaffold(
+          body: widget.navigationShell,
 
-        bottomNavigationBar: deleteItems
-            ? NavigationBar(
-                indicatorColor: Colors.transparent,
-                overlayColor: WidgetStateProperty.all(Colors.transparent),
-                surfaceTintColor: Colors.transparent,
-                shadowColor: Colors.transparent,
-                backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
-                destinations: [
-                  const NavigationDestination(
-                    icon: SizedBox.shrink(),
-                    label: '',
-                  ),
-                  NavigationDestination(
-                    icon: Align(
-                      alignment: Alignment.centerRight,
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 28, top: 18),
-                        child: IconButton(
-                          onPressed: () {
-                            if (widget.navigationShell.currentIndex == 0) {
-                              deleteEventBus.emitDeleteNoteClicked(true);
-                            } else {
-                              deleteEventBus.emitDeleteTodoClicked(true);
-                            }
-                          },
-                          icon: Icon(
-                            Icons.delete,
-                            size: 24,
-                            color: deletable ? Colors.red : Colors.grey,
-                          ),
-                        ),
-                      ),
-                    ),
-                    label: '',
-                  ),
-                ],
-              )
-            : NavigationBarTheme(
-                data: NavigationBarThemeData(
+          bottomNavigationBar: deleteItems
+              ? NavigationBar(
                   indicatorColor: Colors.transparent,
                   overlayColor: WidgetStateProperty.all(Colors.transparent),
                   surfaceTintColor: Colors.transparent,
                   shadowColor: Colors.transparent,
                   backgroundColor: Theme.of(
                     context,
-                  ).colorScheme.surfaceContainerLow,
-                  iconTheme: WidgetStateProperty.resolveWith<IconThemeData>(
-                    (states) => IconThemeData(
-                      color: states.contains(WidgetState.selected)
-                          ? Colors.amber
-                          : Colors.grey,
+                  ).colorScheme.surfaceContainer,
+                  destinations: [
+                    const NavigationDestination(
+                      icon: SizedBox.shrink(),
+                      label: '',
                     ),
-                  ),
-
-                  labelTextStyle: WidgetStateProperty.resolveWith<TextStyle>(
-                    (states) => TextStyle(
-                      color: states.contains(WidgetState.selected)
-                          ? Colors.amber
-                          : Colors.grey,
-                    ),
-                  ),
-                ),
-
-                child: NavigationBar(
-                  selectedIndex: widget.navigationShell.currentIndex,
-
-                  onDestinationSelected: (index) {
-                    widget.navigationShell.goBranch(index);
-                  },
-
-                  animationDuration: Duration.zero,
-
-                  destinations: const [
                     NavigationDestination(
-                      icon: Icon(Icons.description_outlined),
-                      selectedIcon: Icon(Icons.description),
-                      label: 'Notes',
-                    ),
-
-                    NavigationDestination(
-                      icon: Icon(Icons.check_circle_outline_rounded),
-                      selectedIcon: Icon(Icons.check_circle_rounded),
-                      label: 'To-Dos',
+                      icon: Align(
+                        alignment: Alignment.centerRight,
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 28, top: 18),
+                          child: IconButton(
+                            onPressed: () {
+                              if (widget.navigationShell.currentIndex == 0) {
+                                deleteEventBus.emitDeleteNoteClicked(true);
+                              } else {
+                                deleteEventBus.emitDeleteTodoClicked(true);
+                              }
+                            },
+                            icon: Icon(
+                              Icons.delete,
+                              size: 24,
+                              color: deletable ? Colors.red : Colors.grey,
+                            ),
+                          ),
+                        ),
+                      ),
+                      label: '',
                     ),
                   ],
+                )
+              : NavigationBarTheme(
+                  data: NavigationBarThemeData(
+                    indicatorColor: Colors.transparent,
+                    overlayColor: WidgetStateProperty.all(Colors.transparent),
+                    surfaceTintColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerLow,
+                    iconTheme: WidgetStateProperty.resolveWith<IconThemeData>(
+                      (states) => IconThemeData(
+                        color: states.contains(WidgetState.selected)
+                            ? Colors.amber
+                            : theme.colorScheme.outline,
+                      ),
+                    ),
+
+                    labelTextStyle: WidgetStateProperty.resolveWith<TextStyle>(
+                      (states) => TextStyle(
+                        color: states.contains(WidgetState.selected)
+                            ? Colors.amber
+                            : theme.colorScheme.outline,
+                      ),
+                    ),
+                  ),
+
+                  child: NavigationBar(
+                    selectedIndex: widget.navigationShell.currentIndex,
+
+                    onDestinationSelected: (index) {
+                      if (widget.navigationShell.currentIndex == index) {
+                        return;
+                      }
+                      closeSwipeableEventBus.emit();
+                      Future.delayed(const Duration(milliseconds: 165), () {
+                        widget.navigationShell.goBranch(index);
+                      });
+                    },
+
+                    animationDuration: Duration.zero,
+
+                    destinations: const [
+                      NavigationDestination(
+                        icon: Icon(Icons.description_outlined),
+                        selectedIcon: Icon(Icons.description),
+                        label: 'Notes',
+                      ),
+
+                      NavigationDestination(
+                        icon: Icon(Icons.check_circle_outline_rounded),
+                        selectedIcon: Icon(Icons.check_circle_rounded),
+                        label: 'To-Dos',
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+        ),
       ),
     );
   }

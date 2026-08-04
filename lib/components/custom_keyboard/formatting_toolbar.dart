@@ -1,11 +1,11 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_quill/flutter_quill.dart'
+    show QuillController, Attribute, IndentAttribute;
 import 'package:notich/components/custom_keyboard/background_palette.dart';
 import 'package:notich/components/custom_keyboard/color_palette.dart';
 import 'package:notich/components/custom_keyboard/editor_colors.dart';
 import 'package:notich/components/custom_keyboard/toolbar_btn.dart';
 import 'package:notich/components/custom_keyboard/toolbar_group.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_quill/flutter_quill.dart'
-    show QuillController, Attribute, IndentAttribute;
 
 class FormattingToolbar extends StatefulWidget {
   final QuillController controller;
@@ -139,8 +139,9 @@ class _FormattingToolbarState extends State<FormattingToolbar> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
-      color: EditorColors.background,
+      color: theme.colorScheme.surfaceContainerLow,
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -382,7 +383,9 @@ class _FormattingToolbarState extends State<FormattingToolbar> {
                     horizontal: 12,
                   ),
                   decoration: BoxDecoration(
-                    color: EditorColors.panel,
+                    color: theme.brightness == Brightness.light
+                        ? const Color.fromARGB(92, 158, 158, 158)
+                        : EditorColors.panel,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: ColorPalette(
@@ -421,7 +424,9 @@ class _FormattingToolbarState extends State<FormattingToolbar> {
                     horizontal: 12,
                   ),
                   decoration: BoxDecoration(
-                    color: EditorColors.panel,
+                    color: theme.brightness == Brightness.light
+                        ? const Color.fromARGB(92, 158, 158, 158)
+                        : EditorColors.panel,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: BackgroundPalette(

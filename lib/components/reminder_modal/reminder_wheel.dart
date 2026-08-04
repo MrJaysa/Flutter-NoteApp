@@ -140,7 +140,7 @@ class _WheelItem extends StatelessWidget {
         fontSize = 16;
         weight = FontWeight.w400;
     }
-
+    final theme = Theme.of(context);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
@@ -153,7 +153,9 @@ class _WheelItem extends StatelessWidget {
             child: AnimatedDefaultTextStyle(
               duration: const Duration(milliseconds: 120),
               style: TextStyle(
-                color: Colors.white,
+                color: theme.brightness == Brightness.dark
+                    ? Colors.white
+                    : Colors.black,
                 fontSize: fontSize,
                 fontWeight: weight,
               ),

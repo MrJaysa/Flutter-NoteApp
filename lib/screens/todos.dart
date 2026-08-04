@@ -1,16 +1,18 @@
 import 'dart:async';
 
-import 'package:notich/components/add_todo_sheet.dart';
-import 'package:notich/components/delete_modal.dart';
-import 'package:notich/components/todo_pop_menu.dart';
-import 'package:notich/components/todo_tile.dart';
-import 'package:notich/events/delete_event.dart';
-import 'package:notich/helpers/notification.dart';
-import 'package:notich/models/model.dart';
-import 'package:notich/models/todo_db.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:go_router/go_router.dart';
 import 'package:isar_community/isar.dart';
+import 'package:notich/components/add_todo_sheet.dart';
+import 'package:notich/components/todo_pop_menu.dart';
+import 'package:notich/components/todo_tile.dart';
+import 'package:notich/events/close_swipable_event.dart';
+import 'package:notich/events/delete_event.dart';
+import 'package:notich/helpers/notification.dart';
+import 'package:notich/modals/delete_modal.dart' show showDeleteDialog;
+import 'package:notich/models/model.dart';
+import 'package:notich/models/todo_db.dart';
 
 class TodoItemData {
   final String id;
@@ -184,24 +186,12 @@ class _TodosScreenState extends State<TodosScreen> {
     deleteEventBus.emitChecked(false);
   }
 
-  Future<bool?> showDeleteDialog(BuildContext context, int selectedCount) {
-    return showModalBottomSheet<bool>(
-      context: context,
-      useRootNavigator: true,
-      backgroundColor: const Color(0xFF1E1E1E),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (_) => DeleteDialog(selectedCount: selectedCount, type: "Todo"),
-    );
-  }
-
   void _showTodoDialog({String? text, DateTime? date, int? id, bool? isDone}) {
+    closeSwipeableEventBus.emit();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       useRootNavigator: true,
-      backgroundColor: const Color(0xFF1E1E1E),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -286,6 +276,7 @@ class _TodosScreenState extends State<TodosScreen> {
       final confirmed = await showDeleteDialog(
         navigator.context,
         (_selectedTodos.completed.length + _selectedTodos.pending.length),
+        "Todo",
       );
 
       deleteEventBus.emitDeleteTodoClicked(false);
@@ -324,18 +315,24 @@ class _TodosScreenState extends State<TodosScreen> {
     final bool isPendingEmpty = _pendingTodos.isEmpty;
     final bool isDoneEmpty = _doneTodos.isEmpty;
     final bool showSearch = (_pendingTodos.length + _doneTodos.length) > 5;
+    final theme = Theme.of(context);
 
     return Scaffold(
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverAppBar.medium(
+            systemOverlayStyle: const SystemUiOverlayStyle(
+              statusBarColor: Colors.transparent,
+              statusBarIconBrightness: Brightness.dark,
+              statusBarBrightness: Brightness.light,
+            ),
             expandedHeight: showSearch ? 180 : null,
             collapsedHeight: showSearch ? 140 : null,
             foregroundColor: Colors.white,
             backgroundColor: WidgetStateColor.resolveWith((states) {
               if (states.contains(WidgetState.scrolledUnder)) {
-                return Colors.black;
+                return theme.colorScheme.primaryContainer;
               }
               return Colors.transparent;
             }),
@@ -343,7 +340,10 @@ class _TodosScreenState extends State<TodosScreen> {
                 ? [
                     IconButton(
                       onPressed: _clearSelection,
-                      icon: const Icon(Icons.close),
+                      icon: Icon(
+                        Icons.close,
+                        color: theme.colorScheme.tertiary,
+                      ),
                     ),
                     Checkbox(
                       value:
@@ -367,10 +367,7 @@ class _TodosScreenState extends State<TodosScreen> {
                 children: [
                   Text(
                     appBarTitle,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   if (showSearch) ...[
                     const SizedBox(height: 8),
@@ -407,6 +404,7 @@ class _TodosScreenState extends State<TodosScreen> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Row(
+                                spacing: 3,
                                 children: [
                                   Icon(
                                     Icons.search,
@@ -420,7 +418,6 @@ class _TodosScreenState extends State<TodosScreen> {
                                             104,
                                           ),
                                   ),
-                                  const SizedBox(width: 3),
                                   Text(
                                     'Search',
                                     style: TextStyle(
@@ -431,7 +428,7 @@ class _TodosScreenState extends State<TodosScreen> {
                                               43,
                                               43,
                                             )
-                                          : Colors.white38,
+                                          : theme.colorScheme.tertiary,
                                       fontSize: 12,
                                       fontWeight: FontWeight.w400,
                                     ),
@@ -455,18 +452,18 @@ class _TodosScreenState extends State<TodosScreen> {
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
+                  children: [
                     Icon(
                       Icons.check_circle_rounded,
                       size: 80,
-                      color: Colors.white30,
+                      color: theme.colorScheme.onSecondary,
                     ),
                     SizedBox(height: 12),
                     Text(
                       'None',
                       style: TextStyle(
                         fontSize: 18,
-                        color: Colors.white30,
+                        color: theme.colorScheme.onSecondary,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -594,7 +591,8 @@ class _TodosScreenState extends State<TodosScreen> {
       floatingActionButton: !checkState
           ? FloatingActionButton(
               onPressed: _showTodoDialog,
-              backgroundColor: const Color(0xFF2B2A2A),
+              backgroundColor: theme.colorScheme.secondaryContainer,
+              elevation: 5,
               foregroundColor: Colors.amber,
               shape: const CircleBorder(),
               child: const Icon(Icons.add),

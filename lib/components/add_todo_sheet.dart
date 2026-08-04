@@ -1,9 +1,9 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:notich/components/reminder_modal/reminder_picker.dart';
 import 'package:notich/helpers/notification.dart';
 import 'package:notich/models/model.dart';
 import 'package:notich/models/todo_db.dart';
-import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 class AddTodoSheet extends StatefulWidget {
   final String? title;
@@ -125,36 +125,22 @@ class _AddTodoSheetState extends State<AddTodoSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
             Text(
               widget.title != null ? 'Edit Todo' : 'New Todo',
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 24),
             TextField(
               controller: _todoController,
               autofocus: true,
-              style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
                 hintText: 'Add a To-do item',
-                hintStyle: TextStyle(color: theme.colorScheme.onInverseSurface),
+                hintStyle: TextStyle(
+                  color: const Color.fromARGB(147, 158, 158, 158),
+                ),
                 focusedBorder: const UnderlineInputBorder(
                   borderSide: BorderSide(
-                    color: Color.fromARGB(255, 56, 55, 55),
+                    color: Color.fromARGB(84, 56, 55, 55),
                     width: 2.0,
                   ),
                 ),
