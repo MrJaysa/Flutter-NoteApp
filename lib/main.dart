@@ -1,6 +1,6 @@
-import 'package:Notich/helpers/notification.dart';
-import 'package:Notich/models/model.dart';
-import 'package:Notich/router.dart';
+import 'package:notich/helpers/notification.dart';
+import 'package:notich/models/model.dart';
+import 'package:notich/router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 

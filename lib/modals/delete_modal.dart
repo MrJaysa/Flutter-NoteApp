@@ -1,4 +1,4 @@
-import 'package:Notich/components/delete_modal.dart';
+import 'package:notich/components/delete_modal.dart';
 import 'package:flutter/material.dart';
 
 Future<bool?> showDeleteDialog(BuildContext context, int selectedCount) {

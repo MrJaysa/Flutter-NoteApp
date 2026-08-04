@@ -1,7 +1,7 @@
-import 'package:Notich/components/reminder_modal/reminder_picker.dart';
-import 'package:Notich/helpers/notification.dart';
-import 'package:Notich/models/model.dart';
-import 'package:Notich/models/todo_db.dart';
+import 'package:notich/components/reminder_modal/reminder_picker.dart';
+import 'package:notich/helpers/notification.dart';
+import 'package:notich/models/model.dart';
+import 'package:notich/models/todo_db.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 

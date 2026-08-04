@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'package:Notich/helpers/date_formatter.dart';
-import 'package:Notich/helpers/note_preview.dart';
+import 'package:notich/helpers/date_formatter.dart';
+import 'package:notich/helpers/note_preview.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 

@@ -1,5 +1,5 @@
-import 'package:Notich/models/note_db.dart';
-import 'package:Notich/models/todo_db.dart';
+import 'package:notich/models/note_db.dart';
+import 'package:notich/models/todo_db.dart';
 import 'package:isar_community/isar.dart';
 import 'package:path_provider/path_provider.dart';
 

@@ -1,8 +1,8 @@
-import 'package:Notich/components/custom_keyboard/background_palette.dart';
-import 'package:Notich/components/custom_keyboard/color_palette.dart';
-import 'package:Notich/components/custom_keyboard/editor_colors.dart';
-import 'package:Notich/components/custom_keyboard/toolbar_btn.dart';
-import 'package:Notich/components/custom_keyboard/toolbar_group.dart';
+import 'package:notich/components/custom_keyboard/background_palette.dart';
+import 'package:notich/components/custom_keyboard/color_palette.dart';
+import 'package:notich/components/custom_keyboard/editor_colors.dart';
+import 'package:notich/components/custom_keyboard/toolbar_btn.dart';
+import 'package:notich/components/custom_keyboard/toolbar_group.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart'
     show QuillController, Attribute, IndentAttribute;

@@ -1,4 +1,4 @@
-package com.example.Notich
+package com.example.notich
 
 import io.flutter.embedding.android.FlutterActivity
 

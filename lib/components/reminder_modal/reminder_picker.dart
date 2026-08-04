@@ -1,4 +1,4 @@
-import 'package:Notich/helpers/notification.dart';
+import 'package:notich/helpers/notification.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 

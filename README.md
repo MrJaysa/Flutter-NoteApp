@@ -1,4 +1,4 @@
-# Notich
+# notich
 
 A new Flutter project.
 

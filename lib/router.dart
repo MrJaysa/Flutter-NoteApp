@@ -1,9 +1,9 @@
-import 'package:Notich/layouts/main_layout.dart';
-import 'package:Notich/screens/note_modification.dart';
-import 'package:Notich/screens/notes.dart';
-import 'package:Notich/screens/search.dart';
-import 'package:Notich/screens/settings.dart';
-import 'package:Notich/screens/todos.dart';
+import 'package:notich/layouts/main_layout.dart';
+import 'package:notich/screens/note_modification.dart';
+import 'package:notich/screens/notes.dart';
+import 'package:notich/screens/search.dart';
+import 'package:notich/screens/settings.dart';
+import 'package:notich/screens/todos.dart';
 import 'package:go_router/go_router.dart';
 
 final GoRouter appRouter = GoRouter(

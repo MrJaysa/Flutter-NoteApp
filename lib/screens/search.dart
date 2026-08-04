@@ -1,12 +1,12 @@
 import 'dart:convert';
 
-import 'package:Notich/components/add_todo_sheet.dart';
-import 'package:Notich/components/note_tile.dart';
-import 'package:Notich/components/todo_tile.dart';
-import 'package:Notich/helpers/notification.dart';
-import 'package:Notich/models/model.dart';
-import 'package:Notich/models/note_db.dart';
-import 'package:Notich/models/todo_db.dart';
+import 'package:notich/components/add_todo_sheet.dart';
+import 'package:notich/components/note_tile.dart';
+import 'package:notich/components/todo_tile.dart';
+import 'package:notich/helpers/notification.dart';
+import 'package:notich/models/model.dart';
+import 'package:notich/models/note_db.dart';
+import 'package:notich/models/todo_db.dart';
 import 'package:flutter/material.dart';
 import 'package:isar_community/isar.dart';
 

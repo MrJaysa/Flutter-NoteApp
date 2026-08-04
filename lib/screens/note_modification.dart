@@ -1,12 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:Notich/components/custom_keyboard/formatting_toolbar.dart';
-import 'package:Notich/components/custom_quill_image_view.dart';
-import 'package:Notich/helpers/note_preview.dart';
-import 'package:Notich/modals/delete_modal.dart';
-import 'package:Notich/models/model.dart';
-import 'package:Notich/models/note_db.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_quill/flutter_quill.dart'
@@ -27,6 +21,12 @@ import 'package:flutter_quill/flutter_quill.dart'
         VerticalSpacing;
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:notich/components/custom_keyboard/formatting_toolbar.dart';
+import 'package:notich/components/custom_quill_image_view.dart';
+import 'package:notich/helpers/note_preview.dart';
+import 'package:notich/modals/delete_modal.dart';
+import 'package:notich/models/model.dart';
+import 'package:notich/models/note_db.dart';
 
 class AddNoteScreen extends StatefulWidget {
   final String? id;
@@ -57,36 +57,39 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
   void _updateHasContent() {
     final plainContent = _quillController.document.toPlainText().trim();
 
+    final preview = getNotePreview(
+      _titleController.text.trim(),
+      _quillController.document.toDelta().toJson(),
+    );
+
     final searchText = _titleController.text.isNotEmpty
         ? "${_titleController.text} $plainContent"
-        : plainContent;
+        : "$plainContent ${preview.title}";
 
     final hasContent =
         (_titleController.text.trim().isNotEmpty ||
             !_quillController.document.isEmpty()) &&
         searchText.isNotEmpty;
 
-    if (hasContent != _hasContent) {
-      _hasContent = hasContent;
-      _saveTimer?.cancel();
+    _hasContent = hasContent;
+    _saveTimer?.cancel();
 
-      _saveTimer = Timer(const Duration(milliseconds: 500), () async {
-        if (!_hasContent) {
-          if (_noteId != null) {
-            await db.writeTxn(() async {
-              await db.collection<NoteData>().delete(int.parse(_noteId!));
-            });
+    _saveTimer = Timer(const Duration(milliseconds: 500), () async {
+      if (!_hasContent) {
+        if (_noteId != null) {
+          await db.writeTxn(() async {
+            await db.collection<NoteData>().delete(int.parse(_noteId!));
+          });
 
-            _noteId = null;
-          }
-
-          return;
+          _noteId = null;
         }
 
-        await _saveData();
-      });
-      setState(() {});
-    }
+        return;
+      }
+
+      await _saveData();
+    });
+    setState(() {});
   }
 
   void _listenToKeyPressEnter(DocChange change) {

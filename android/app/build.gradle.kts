@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.Notich"
+    namespace = "com.example.notich"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -16,7 +16,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.Notich"
+        applicationId = "com.example.notich"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

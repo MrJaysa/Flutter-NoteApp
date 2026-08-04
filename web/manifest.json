@@ -1,6 +1,6 @@
 {
-  "name": "Notich",
-  "short_name": "Notich",
+  "name": "notich",
+  "short_name": "notich",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#0175C2",
