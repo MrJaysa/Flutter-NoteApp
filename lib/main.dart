@@ -9,11 +9,10 @@ final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.system);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
 
   await Database.instance.init();
   await NotificationService().init();
-
-  final prefs = await SharedPreferences.getInstance();
 
   switch (prefs.getString('theme')) {
     case 'light':
