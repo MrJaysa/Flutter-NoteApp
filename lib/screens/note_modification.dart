@@ -440,6 +440,7 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
     return PopScope(
       canPop: !_showFormattingToolbar,
       onPopInvokedWithResult: (didPop, result) async {
@@ -516,7 +517,9 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
                           border: InputBorder.none,
                           hintText: "Title",
                           hintStyle: TextStyle(
-                            color: theme.colorScheme.tertiary,
+                            color: theme.brightness == Brightness.dark
+                                ? const Color.fromARGB(135, 158, 158, 158)
+                                : theme.colorScheme.tertiary,
                             fontSize: 26,
                             fontWeight: FontWeight.w600,
                           ),
@@ -660,7 +663,14 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
                                   TextStyle(
                                     fontSize: 18,
                                     height: 1.45,
-                                    color: theme.colorScheme.tertiary,
+                                    color: theme.brightness == Brightness.dark
+                                        ? const Color.fromARGB(
+                                            135,
+                                            158,
+                                            158,
+                                            158,
+                                          )
+                                        : theme.colorScheme.tertiary,
                                   ),
                                   HorizontalSpacing.zero,
                                   const VerticalSpacing(4, 5),
@@ -687,7 +697,13 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
                                   null,
                                 ),
                                 paragraph: DefaultTextBlockStyle(
-                                  const TextStyle(fontSize: 18, height: 1.45),
+                                  TextStyle(
+                                    fontSize: 18,
+                                    height: 1.45,
+                                    color: theme.brightness == Brightness.dark
+                                        ? Colors.white
+                                        : Colors.black,
+                                  ),
                                   HorizontalSpacing.zero,
                                   const VerticalSpacing(4, 5),
                                   const VerticalSpacing(4, 5),

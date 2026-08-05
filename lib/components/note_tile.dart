@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import 'package:notich/events/close_swipable_event.dart';
 import 'package:notich/helpers/date_formatter.dart';
 import 'package:notich/helpers/note_preview.dart';
-import 'package:notich/modals/delete_modal.dart';
 import 'package:notich/models/model.dart';
 import 'package:notich/models/note_db.dart';
 
@@ -70,15 +69,11 @@ class _NoteCardState extends State<NoteCard>
   Future<void> _deleteNote() async {
     if (!mounted) return;
 
-    final confirmed = await showDeleteDialog(context, 1, "Note");
+    await db.writeTxn(() async {
+      await db.collection<NoteData>().delete(int.parse(widget.id));
+    });
 
-    if (confirmed == true) {
-      await db.writeTxn(() async {
-        await db.collection<NoteData>().delete(int.parse(widget.id));
-      });
-
-      widget.reload?.call();
-    }
+    widget.reload?.call();
   }
 
   @override

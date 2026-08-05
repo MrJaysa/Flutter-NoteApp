@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
 import 'package:notich/events/close_swipable_event.dart';
-import 'package:notich/modals/delete_modal.dart';
 import 'package:notich/models/model.dart';
 import 'package:notich/models/todo_db.dart';
 
@@ -71,15 +70,11 @@ class _TodoItemTileState extends State<TodoItemTile>
   Future<void> _deleteNote() async {
     if (!mounted) return;
 
-    final confirmed = await showDeleteDialog(context, 1, "Note");
+    await db.writeTxn(() async {
+      await db.collection<TodoData>().delete(int.parse(widget.id));
+    });
 
-    if (confirmed == true) {
-      await db.writeTxn(() async {
-        await db.collection<TodoData>().delete(int.parse(widget.id));
-      });
-
-      widget.reload?.call();
-    }
+    widget.reload?.call();
   }
 
   Stream<void> _minuteTick() async* {

@@ -272,8 +272,12 @@ class _FormattingToolbarState extends State<FormattingToolbar> {
                         child: Icon(
                           Icons.format_indent_increase,
                           color: _canDecreaseIndent
-                              ? Colors.white
-                              : const Color.fromARGB(255, 83, 83, 83),
+                              ? (theme.brightness == Brightness.dark
+                                    ? Colors.white
+                                    : Colors.black)
+                              : (theme.brightness == Brightness.dark
+                                    ? const Color.fromARGB(255, 83, 83, 83)
+                                    : theme.colorScheme.tertiary),
                         ),
                       ),
                     ),
