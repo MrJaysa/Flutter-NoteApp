@@ -322,10 +322,14 @@ class _TodosScreenState extends State<TodosScreen> {
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverAppBar.medium(
-            systemOverlayStyle: const SystemUiOverlayStyle(
+            systemOverlayStyle: SystemUiOverlayStyle(
               statusBarColor: Colors.transparent,
-              statusBarIconBrightness: Brightness.dark,
-              statusBarBrightness: Brightness.light,
+              statusBarIconBrightness: theme.brightness == Brightness.dark
+                  ? Brightness.light
+                  : Brightness.dark,
+              statusBarBrightness: theme.brightness == Brightness.dark
+                  ? Brightness.dark
+                  : Brightness.light,
             ),
             expandedHeight: showSearch ? 180 : null,
             collapsedHeight: showSearch ? 140 : null,
